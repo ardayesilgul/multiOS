@@ -1,0 +1,720 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="multiOS">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/assets/multios.png">
+<title>{{APP_NAME}}</title>
+<link rel="stylesheet" href="/assets/apple-tokens.css">
+<style>
+  :root {
+    --bg: #000000;
+    --surface: #111113;
+    --raise: #1C1C20;
+    --border: #27272A;
+    --hair: rgba(255, 255, 255, 0.06);
+    --text: #F4F4F5;
+    --muted: #A1A1AA;
+    --faint: #71717A;
+    --ok: #34D399;
+    --err: #F87171;
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --out: cubic-bezier(0.22, 1, 0.36, 1);
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    --shadow-contact: 0 2px 6px rgba(0, 0, 0, 0.7);
+    --shadow-penumbra: 0 16px 36px rgba(0, 0, 0, 0.55);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--bg); }
+  body {
+    min-height: 100vh;
+    background: var(--bg); color: var(--text);
+    font: 16px/1.5 var(--sans);
+    -webkit-font-smoothing: antialiased;
+    padding: calc(env(safe-area-inset-top) + 28px) 18px calc(env(safe-area-inset-bottom) + 40px);
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; }
+
+  header { display: flex; flex-direction: column; gap: 6px; padding: 0 6px 26px; }
+  .app { font: 12px/1 var(--mono); color: var(--faint); letter-spacing: 0.02em; }
+  h1 { font-size: 28px; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em; word-break: break-word; }
+  .conn { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); margin-top: 4px; }
+  .conn i { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); transition: background 300ms var(--out); }
+  .conn.on i { background: var(--ok); box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.14); }
+  .conn.off i { background: var(--err); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    box-shadow: var(--shadow-contact), var(--shadow-penumbra);
+    margin-bottom: 18px;
+  }
+
+  /* Send (iPhone -> PC) */
+  .send { padding: 22px 20px 20px; display: flex; flex-direction: column; gap: 16px; }
+  .send h2, .setup h2, .outbound-box h2, .clip-box h2 { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .send p, .setup > p, .outbound-box p, .clip-box p { font-size: 14px; color: var(--muted); line-height: 1.55; }
+  .pick {
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 56px; padding: 16px 20px;
+    border-radius: 16px;
+    background: var(--text); color: #000;
+    font-size: 16px; font-weight: 600;
+    transition: transform 380ms var(--spring), opacity 200ms var(--out);
+  }
+  .pick:active { transform: scale(0.97); }
+  .pick input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; }
+  .pick.busy { opacity: 0.35; pointer-events: none; }
+
+  .progress { display: none; flex-direction: column; gap: 10px; }
+  .progress.show { display: flex; animation: enter 480ms var(--spring) both; }
+  @keyframes enter { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  .prow { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+  .prow .label { font-weight: 500; word-break: break-word; }
+  .prow .pct { font: 13px/1.5 var(--mono); color: var(--muted); flex-shrink: 0; }
+  .bar { height: 3px; border-radius: 3px; background: var(--border); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--text); transition: width 120ms linear; }
+  .sub { font: 12.5px/1.5 var(--mono); color: var(--faint); }
+  .progress.done .bar i { background: var(--ok); }
+  .progress.fail .bar i { background: var(--err); }
+  .progress.fail .label { color: var(--err); }
+
+  /* Receive Outbound (PC -> iPhone) */
+  .outbound-box { padding: 22px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .outbound-heading { display:flex; align-items:center; gap:12px; }
+  .outbound-heading h2 { flex:1; min-width:0; margin:0; }
+  .outbound-heading .chip { flex:none; }
+  .outbound-feed { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+  .phone-outbound-card {
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: #000;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    animation: enter 420ms var(--spring) both;
+  }
+  .phone-outbound-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: #111113;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .phone-outbound-info { display: flex; flex-direction: column; gap: 3px; overflow: hidden; flex: 1; }
+  .phone-outbound-name { font-size: 14px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .phone-outbound-meta { font: 12px/1 var(--mono); color: var(--faint); }
+  .phone-outbound-dl {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 38px; padding: 8px 16px;
+    border-radius: 10px;
+    background: var(--text); color: #000;
+    font-size: 13.5px; font-weight: 600;
+    flex-shrink: 0;
+    text-decoration: none;
+    transition: transform 320ms var(--spring);
+  }
+  .phone-outbound-dl:active { transform: scale(0.95); }
+
+  /* Clipboard */
+  .clip-box { padding: 22px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .clip-live {
+    padding: 14px;
+    border-radius: 14px;
+    background: #000;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .clip-label { font: 11.5px/1 var(--mono); color: var(--faint); text-transform: uppercase; letter-spacing: 0.04em; }
+  .clip-content { font: 14px/1.55 var(--sans); color: var(--text); word-break: break-word; max-height: 120px; overflow-y: auto; }
+  .clip-send-box { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+  .clip-btn-row { display: flex; gap: 8px; }
+  .chip-action {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 42px;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 10px;
+    background: var(--raise);
+    border: 1px solid var(--border);
+    transition: transform 360ms var(--spring), background 160ms var(--out);
+  }
+  .chip-action:active { transform: scale(0.96); }
+  .chip-action.copied { color: var(--ok); }
+  .clip-input {
+    width: 100%;
+    background: #000;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 10px 14px;
+    font: 14px/1.4 var(--sans);
+    outline: none;
+  }
+  .clip-input:focus { border-color: #3F3F46; }
+
+  .phone-clip-thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: #000;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  /* Setup / Shortcuts Instructions */
+  .setup { padding: 22px 20px 12px; }
+  .setup > p { margin: 8px 0 14px; }
+  ol { list-style: none; counter-reset: s; }
+  li {
+    counter-increment: s;
+    position: relative;
+    padding: 16px 0 16px 40px;
+    border-top: 1px solid var(--hair);
+    font-size: 15px; line-height: 1.55;
+  }
+  li::before {
+    content: counter(s);
+    position: absolute; left: 0; top: 15px;
+    width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center;
+    font: 600 12.5px/1 var(--mono); color: var(--muted);
+    background: var(--raise); border: 1px solid var(--border);
+  }
+  li b { font-weight: 600; }
+  .en { font: 12.5px/1.5 var(--mono); color: var(--faint); }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin-top: 10px; font-size: 14px; }
+  .kv span:nth-child(odd) { color: var(--faint); }
+  .kv code { font: 13px/1.5 var(--mono); color: var(--text); }
+
+  .urlbox {
+    margin-top: 12px;
+    padding: 14px 14px 12px;
+    border-radius: 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .urlbox code { font: 12.5px/1.55 var(--mono); color: var(--text); word-break: break-all; }
+  .urlrow { display: flex; gap: 8px; }
+  .chip {
+    flex: 1;
+    min-height: 40px; padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--raise); border: 1px solid var(--border);
+    font-size: 14px; font-weight: 500;
+    transition: transform 360ms var(--spring), background 160ms var(--out);
+    text-align: center;
+  }
+  .shortcut-link { display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
+  #copyStatus:empty { display:none; }
+  .chip:active { transform: scale(0.96); }
+  .chip.copied { color: var(--ok); }
+  .seg { display: flex; padding: 3px; border-radius: 10px; background: var(--raise); border: 1px solid var(--border); margin-top: 12px; }
+  .seg button { flex: 1; min-height: 34px; border-radius: 8px; font-size: 13px; color: var(--muted); transition: background 200ms var(--out), color 200ms var(--out); }
+  .seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+
+  .note { font-size: 13px; color: var(--faint); line-height: 1.55; padding: 4px 6px 0; }
+
+  /* Apple Standalone Web App Banner & Save Badge */
+
+  .save-badge {
+    margin-top: 12px;
+    padding: 11px 14px;
+    border-radius: 12px;
+    background: rgba(52, 211, 153, 0.1);
+    border: 1px solid rgba(52, 211, 153, 0.25);
+    color: var(--ok);
+    font-size: 13px;
+    line-height: 1.45;
+    display: none;
+    align-items: center;
+    gap: 9px;
+    animation: enter 360ms var(--spring) both;
+  }
+  .save-badge.show { display: flex; }
+  :root { --bg:#F5F5F7; --surface:#FFFFFF; --raise:#ECECF0; --border:#DEDEE3; --hair:#DEDEE3; --text:#1D1D1F; --muted:#626269; --faint:#626269; --ok:#248A3D; --err:#B42318; --accent:#0071E3; --sans:var(--font-sans); }
+  @media (prefers-color-scheme:dark) { :root { --bg:#111113; --surface:#1C1C1E; --raise:#303033; --border:#404044; --hair:#404044; --text:#F5F5F7; --muted:#B9B9C0; --faint:#B9B9C0; --ok:#30D158; --err:#FF6961; --accent:#64ACFF; } }
+  * { letter-spacing:0!important; }
+  body { max-width:540px; margin:0 auto; padding:calc(env(safe-area-inset-top) + 24px) 24px calc(env(safe-area-inset-bottom) + 24px); }
+  header { padding:0 0 24px; gap:10px; }
+  .app { display:flex; align-items:center; gap:10px; font:600 19px/1.3 var(--sans); color:var(--text); margin-bottom:14px; }
+  .app img { width:30px; height:30px; border-radius:8px; }
+  h1 { font-size:24px; font-weight:600; }
+  .card { background:transparent; border:0; border-bottom:1px solid var(--border); border-radius:0; box-shadow:none; margin:0; }
+  .send,.outbound-box,.clip-box,.setup { padding:24px 0; }
+  .send h2,.outbound-box h2 { font-size:17px; }
+  .pick { background:#0071E3; color:white; border-radius:8px; min-height:52px; font-weight:600; }
+  .phone-outbound-card { background:transparent; border:0; border-radius:0; padding:12px 0; box-shadow:none; }
+  .phone-outbound-thumb { background:var(--surface); border-radius:8px; }
+  .phone-outbound-dl { background:var(--surface); color:var(--accent); min-width:64px; min-height:44px; border-radius:8px; display:flex; align-items:center; justify-content:center; }
+  .chip,.chip-action,.clip-input,.urlbox,.clip-live,.seg { border-radius:8px; }
+  .chip,.chip-action { min-height:44px; color:var(--accent); background:var(--surface); }
+  .clip-live { background:var(--surface); border:0; }
+  .clip-content { color:var(--text); }
+  .clip-input { background:var(--surface); min-height:48px; }
+  .save-badge { background:var(--surface); color:var(--ok); border-color:var(--border); border-radius:8px; }
+  .secondary-panel { border-bottom:1px solid var(--border); }
+  .secondary-panel summary { min-height:64px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; list-style:none; font-size:15px; font-weight:600; }
+  .secondary-panel summary::-webkit-details-marker { display:none; }
+  .secondary-panel summary:after { content:'+'; font-size:20px; font-weight:400; color:var(--muted); }
+  .secondary-panel[open] summary:after { content:'−'; }
+  .secondary-panel .card { border:0; padding-top:0; }
+  .secondary-panel h2 { display:none; }
+  button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible,.pick:focus-within { outline:3px solid var(--accent); outline-offset:3px; }
+  @media(prefers-reduced-motion:reduce) { *,*:before,*:after { animation:none!important; transition:none!important; } .pick:active { transform:none; } }
+  [hidden] { display:none!important; }
+  .quick-nav { display:flex; gap:8px; margin:0 0 4px; }
+  .quick-nav a { flex:1; display:flex; align-items:center; justify-content:center; min-height:44px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--accent); font-size:14px; text-decoration:none; }
+  #sendSection,#clipboardSection { scroll-margin-top:16px; }
+  .file-pick { position:relative; }
+  .file-pick input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+  .file-pick.busy { opacity:0.45; pointer-events:none; }
+  button:disabled { opacity:0.45; cursor:default; }
+  .clip-preview { display:flex; align-items:flex-start; gap:12px; min-width:0; }
+  .clip-preview .clip-content { min-width:0; white-space:pre-wrap; }
+  .clip-label { font:500 14px/1.4 var(--sans); text-transform:none; color:var(--text); }
+  .clip-input { resize:vertical; min-height:84px; font-size:16px; }
+  .clip-btn-row,.urlrow { flex-wrap:wrap; }
+  .clip-btn-row .chip-action { flex:1 1 120px; }
+  .clip-live .urlrow .chip { flex:1 1 110px; }
+  #clipFeedback:empty { display:none; }
+  #clipFeedback[data-state="error"] { color:var(--err); }
+  #clipFeedback[data-state="success"] { color:var(--ok); }
+  #savedLocation { overflow-wrap:anywhere; }
+  #outboundEmpty { padding:4px 0; }
+  @media(max-width:350px) { body { padding-left:16px; padding-right:16px; } }
+</style>
+</head>
+<body>
+  <header>
+    <span class="app" style="gap:0;font-size:22px"><span style="font-weight:400">multi</span><b style="font-weight:700">OS</b></span>
+    <h1>{{PC_NAME}}</h1>
+    <div class="conn" id="conn"><i></i><span id="connText">Bağlantı kontrol ediliyor</span></div>
+  </header>
+
+  <nav class="quick-nav" aria-label="Sayfa bölümleri"><a href="#sendSection">Dosyalar</a><a href="#clipboardSection">Pano</a></nav>
+
+  <!-- Inbound: Send from Phone to PC -->
+  <section class="card send" id="sendSection">
+    <h2>Bilgisayara gönder</h2>
+    <p>Seçtikleriniz Windows'ta belirlediğiniz klasöre hemen gönderilir.</p>
+    <label class="pick" id="pick">
+      Fotoğraf veya video seç
+      <input type="file" id="photos" accept="image/*,video/*" multiple aria-label="Bilgisayara gönderilecek fotoğraf veya videoları seç">
+    </label>
+    <label class="chip-action file-pick" id="filePick">Dosya seç<input type="file" id="file" multiple aria-label="Bilgisayara gönderilecek dosyaları seç"></label>
+    <div class="progress" id="progress" role="status" aria-live="polite">
+      <div class="prow"><span class="label" id="pLabel"></span><span class="pct" id="pPct"></span></div>
+      <div class="bar" id="transferBar" role="progressbar" aria-label="Dosya gönderimi" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="pBar"></i></div>
+      <span class="sub" id="pSub"></span>
+      <div class="save-badge" id="saveBadge">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+        <span id="savedLocation">Bilgisayara kaydedildi.</span>
+      </div>
+    </div>
+    <button class="chip" id="retryUpload" hidden>Yeniden gönder</button>
+  </section>
+
+  <!-- Outbound: Download from PC to iPhone -->
+  <section class="card outbound-box" id="phoneOutboundBox">
+    <div class="outbound-heading"><h2>Bilgisayardan al</h2><button class="chip" id="clearOutbound" aria-label="Gönderilecek dosyaları temizle">Listeyi temizle</button></div>
+    <p id="outboundEmpty">Windows uygulamasında <b>iPhone’a gönder → Dosya seç</b> ile hazırladığınız dosyalar burada görünür.</p>
+    <div class="outbound-feed" id="phoneOutboundFeed"></div>
+  </section>
+
+  <section class="card clip-box" id="clipboardSection" aria-labelledby="clipboardTitle">
+    <h2 id="clipboardTitle">Pano</h2>
+    <div class="clip-live">
+      <h3 class="clip-label">Bilgisayardan telefona</h3>
+      <div class="clip-preview">
+        <img id="phoneClipThumb" class="phone-clip-thumb" style="display:none;" alt="Bilgisayar panosundaki görsel">
+        <div class="clip-content" id="phoneClipText">Pano kontrol ediliyor…</div>
+      </div>
+      <div class="urlrow">
+        <button class="chip" id="phoneClipCopy" disabled>Metni kopyala</button>
+        <a id="phoneClipDownload" class="chip shortcut-link" style="display:none;" download="pano-gorseli.png">Görseli indir</a>
+        <button class="chip" id="clearClipboard" disabled>Kaydı temizle</button>
+      </div>
+      <p class="note">Kaydı temizlemek Windows panosunu değiştirmez.</p>
+    </div>
+    <div class="clip-send-box">
+      <label class="clip-label" for="phoneSendInput">Telefondan bilgisayara</label>
+      <p>Gönderdikleriniz Windows panosuna kopyalanır. Dosya kaydetmek için yukarıdaki gönderme alanını kullanın.</p>
+      <textarea id="phoneSendInput" placeholder="Metin veya bağlantı yazın…" class="clip-input" rows="3"></textarea>
+      <div class="clip-btn-row">
+        <button class="chip-action" id="phoneSendBtn" disabled>Metni gönder</button>
+        <label class="chip-action file-pick" id="clipPhotoPick">Görsel gönder<input type="file" id="phoneClipPhotoInput" accept="image/*" aria-label="Windows panosuna gönderilecek görseli seç"></label>
+      </div>
+    </div>
+    <p class="note" id="clipFeedback" role="status" aria-live="polite"></p>
+  </section>
+
+  <details class="secondary-panel"><summary>Gönderim geçmişi</summary><section class="card" style="padding-bottom:24px"><div id="transferHistory" style="max-height:260px;overflow:auto;margin-bottom:12px"></div><button class="chip" id="clearReceived">Geçmişi temizle</button></section></details>
+  <!-- Shortcuts Integration Guide -->
+  <details class="secondary-panel"><summary>Paylaş menüsü kurulumu</summary>
+  <section class="card setup">
+    <h2>Paylaş menüsünden gönder</h2>
+    <p>Önce kişisel adresinizi kopyalayın. Ardından kestirmeyi eklerken sorulan alana yapıştırın. Bu işlem yalnızca ilk kurulumda gerekir.</p>
+    <ol>
+      <li><b>Bilgisayarınızın adresini kopyalayın.</b>
+        <div class="seg" id="seg" role="group" aria-label="Bağlantı adresi türü">
+          <button class="on" data-mode="host" aria-pressed="true" aria-describedby="addressHint">Bilgisayar adı</button>
+          <button data-mode="ip" aria-pressed="false" aria-describedby="addressHint">IP adresi</button>
+        </div>
+        <p class="note" id="addressHint">Önerilen: multios.local, bilgisayar adıyla bağlanır. IP değişse de genellikle çalışır. Ağınız bu adı bulamıyorsa IP adresini deneyin.</p>
+        <div class="urlbox">
+          <code id="url"></code>
+          <div class="urlrow"><button class="chip" id="copy">Adresi kopyala</button></div>
+        </div>
+        <p class="note" id="copyStatus" role="status"></p>
+      </li>
+      <li><b>Kestirmeyi ekleyip adresi yapıştırın.</b>
+        <p>Aşağıdaki düğmeyle <b>PC'ye Gönder</b> kestirmesini açın. Kurulum sorusu geldiğinde kopyaladığınız adresi yapıştırın ve kurulumu tamamlayın.</p>
+        {{SHORTCUT_INSTALL}}
+      </li>
+      <li>Fotoğraflar veya Dosyalar uygulamasında göndereceklerinizi seçip <b>Paylaş → PC'ye Gönder</b> yolunu izleyin. İlk kullanımda iOS bağlantı izni isterse izin verin.</li>
+    </ol>
+    <p class="note">Kişisel adresiniz eşleşme anahtarınızı içerir; başkalarıyla paylaşmayın. Sonraki gönderimlerde yeniden eşleştirme gerekmez.</p>
+    <details><summary>Kestirmeyi elle oluştur</summary>
+      <ol>
+        <li>Kestirmeler uygulamasında yeni kestirme oluşturup adını <b>PC'ye Gönder</b> yapın. Ayrıntılarından <b>Paylaşma Sayfasında Göster</b> seçeneğini açın.</li>
+        <li><b>Her Birini Tekrarla</b> eylemini ekleyin; girdi olarak <b>Kestirme Girdisi</b>ni seçin.</li>
+        <li>Tekrarın içine <b>URL’nin İçeriğini Al</b> eylemini ekleyip yukarıdaki kişisel adresi yapıştırın. Ayarları şöyle yapın:
+          <div class="kv">
+            <span>Yöntem</span><code>POST</code>
+            <span>İstek gövdesi</span><code>Form</code>
+            <span>Dosya alanı</span><code>file</code>
+            <span>Değer</span><code>Tekrarlanan Öğe</code>
+          </div>
+        </li>
+      </ol>
+    </details>
+  </section>
+
+  <p class="note">Aktarım yalnızca bu Wi-Fi ağı içinde gerçekleşir; dosyalar internete yüklenmez. Bilgisayar ile telefon aynı ağda olmalıdır.</p>
+  </details>
+
+<script>
+(() => {
+  const TOKEN = '{{TOKEN}}';
+  const URLS = { host: '{{UPLOAD_HOST}}', ip: '{{UPLOAD_IP}}' };
+  const INITIAL_OUTBOUND = {{INITIAL_OUTBOUND}} || [];
+  const $ = (id) => document.getElementById(id);
+  async function fetchHistory() {
+    try {
+      const response = await fetch('/api/transfers?t=' + encodeURIComponent(TOKEN), { cache: 'no-store' });
+      if (!response.ok) return;
+      const data = await response.json();
+      const list = $('transferHistory'); list.replaceChildren();
+      for (const transfer of data.transfers) {
+        const row = document.createElement('div'); row.style.cssText = 'padding:12px 0;border-bottom:1px solid var(--border);font-size:14px;overflow-wrap:anywhere';
+        const title = document.createElement('div'); title.textContent = transfer.names.join(', ') || 'Dosya aktarımı';
+        const meta = document.createElement('div'); meta.style.cssText = 'font-size:12px;color:var(--muted);margin-top:4px'; meta.textContent = transfer.state === 'done' ? 'Bilgisayara kaydedildi' : transfer.state === 'active' ? 'Gönderiliyor' : 'Gönderilemedi';
+        row.append(title, meta); list.append(row);
+      }
+      if (!data.transfers.length) list.textContent = 'Geçmiş boş';
+    } catch {}
+  }
+  async function clearRecord(route, button, refresh) {
+    button.disabled = true;
+    try {
+      const response = await fetch(route + '?t=' + encodeURIComponent(TOKEN), { method:'POST' });
+      if (!response.ok) throw new Error();
+      await refresh();
+    } catch { alert('Temizleme tamamlanamadı. Yeniden deneyin.'); }
+    finally { button.disabled = (button.id === 'clearClipboard' && !clipboardItem) || (button.id === 'clearOutbound' && !$('phoneOutboundFeed').children.length); }
+  }
+  $('clearReceived').onclick = () => clearRecord('/api/transfers/clear', $('clearReceived'), async () => {
+    await fetchHistory();
+    if (!$('pick').classList.contains('busy')) { $('progress').classList.remove('show'); $('saveBadge').classList.remove('show'); }
+  });
+  $('clearOutbound').onclick = () => clearRecord('/api/outbound/clear', $('clearOutbound'), fetchOutbound);
+  $('clearClipboard').onclick = () => clearRecord('/api/clipboard/clear', $('clearClipboard'), async () => { await fetchClipboard(); clipboardFeedback('Pano kaydı temizlendi. Windows panosu korundu.', 'success'); });
+  let mode = 'host';
+  let wakeLock = null;
+
+  function fmt(n) {
+    if (n < 1048576) return (n / 1024).toFixed(0) + ' KB';
+    if (n < 1073741824) return (n / 1048576).toFixed(1) + ' MB';
+    return (n / 1073741824).toFixed(2) + ' GB';
+  }
+
+  async function ping() {
+    try {
+      const r = await fetch('/api/ping?t=' + encodeURIComponent(TOKEN), { cache: 'no-store' });
+      const ok = r.ok;
+      $('conn').className = 'conn ' + (ok ? 'on' : 'off');
+      $('connText').textContent = ok ? 'Gönderime hazır' : 'Eşleşme geçersiz';
+    } catch {
+      $('conn').className = 'conn off';
+      $('connText').textContent = 'Bilgisayara ulaşılamıyor';
+    }
+  }
+
+  function renderUrl() {
+    $('url').textContent = URLS[mode];
+    document.querySelectorAll('#seg button').forEach((b) => {
+      const selected = b.dataset.mode === mode;
+      b.classList.toggle('on', selected);
+      b.setAttribute('aria-pressed', String(selected));
+    });
+    $('addressHint').textContent = mode === 'host'
+      ? 'Önerilen: multios.local, bilgisayar adıyla bağlanır. IP değişse de genellikle çalışır. Ağınız bu adı bulamıyorsa IP adresini deneyin.'
+      : 'Bilgisayarın şu anki ağ adresiyle bağlanır. IP değişirse kestirmedeki adresi de yenilemeniz gerekir.';
+    $('copyStatus').textContent = '';
+    $('copy').textContent = 'Adresi kopyala';
+    $('copy').classList.remove('copied');
+  }
+
+  $('seg').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    mode = b.dataset.mode;
+    renderUrl();
+  });
+
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch {}
+    const field = document.createElement('textarea');
+    field.value = text; field.style.position = 'fixed'; field.style.opacity = '0';
+    document.body.appendChild(field); field.select(); field.setSelectionRange(0, text.length);
+    try { return document.execCommand('copy'); } catch { return false; }
+    finally { field.remove(); }
+  }
+
+  $('copy').addEventListener('click', async () => {
+    const copied = await copyText(URLS[mode]);
+    $('copy').textContent = copied ? 'Adres kopyalandı' : 'Adresi kopyala';
+    $('copy').classList.toggle('copied', copied);
+    $('copyStatus').textContent = copied
+      ? 'Şimdi aşağıdan kestirmeyi ekleyin ve kurulum sorusuna bu adresi yapıştırın.'
+      : 'Otomatik kopyalanamadı. Yukarıdaki adrese basılı tutup kopyalayın; ardından kestirmeyi ekleyin.';
+  });
+
+  async function holdScreen(on) {
+    try {
+      if (on && 'wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+      if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+    } catch { /* not supported or denied */ }
+  }
+
+  function setProgress({ label, pct, sub, state }) {
+    const p = $('progress');
+    p.classList.add('show');
+    p.classList.toggle('done', state === 'done');
+    p.classList.toggle('fail', state === 'fail');
+    if (label != null) $('pLabel').textContent = label;
+    if (pct != null) { $('pPct').textContent = Math.floor(pct) + '%'; $('pBar').style.width = pct + '%'; $('transferBar').setAttribute('aria-valuenow', String(Math.floor(pct))); }
+    if (sub != null) $('pSub').textContent = sub;
+  }
+
+  let uploading = false;
+  let retryFiles = [];
+  function uploadFiles(files) {
+    if (!files.length || uploading) return;
+    uploading = true;
+    retryFiles = files;
+    $('retryUpload').hidden = true;
+    const total = files.reduce((sum, file) => sum + file.size, 0);
+    const form = new FormData();
+    files.forEach(file => form.append('file', file, file.name));
+    $('saveBadge').classList.remove('show');
+    for (const id of ['pick', 'filePick']) $(id).classList.add('busy');
+    for (const id of ['photos', 'file']) $(id).disabled = true;
+    holdScreen(true);
+    const xhr = new XMLHttpRequest();
+    const started = performance.now();
+    setProgress({ label: files.length === 1 ? files[0].name : files.length + ' dosya gönderiliyor', pct: 0, sub: '0 / ' + fmt(total), state: 'active' });
+    xhr.upload.onprogress = e => {
+      if (!e.lengthComputable) return;
+      const seconds = (performance.now() - started) / 1000;
+      setProgress({ pct: e.loaded / e.total * 100, sub: fmt(e.loaded) + ' / ' + fmt(e.total) + ' · ' + fmt(seconds > 0 ? e.loaded / seconds : 0) + '/s' });
+    };
+    xhr.upload.onload = () => setProgress({ label: 'Bilgisayara kaydediliyor…', pct: 100, sub: 'Kayıt onayı bekleniyor' });
+    xhr.onload = () => {
+      let result;
+      try { result = JSON.parse(xhr.responseText); } catch {}
+      if (xhr.status === 200 && result && result.ok) {
+        setProgress({ pct: 100, state: 'done', label: files.length === 1 ? 'Dosya kaydedildi' : files.length + ' dosya kaydedildi', sub: fmt(total) + ' · ' + ((performance.now() - started) / 1000).toFixed(1) + ' sn' });
+        $('savedLocation').textContent = 'Kayıt konumu: ' + (result.savedTo || result.savedFolder);
+        $('saveBadge').classList.add('show');
+        retryFiles = [];
+        fetchHistory();
+      } else {
+        setProgress({ state: 'fail', label: 'Gönderilemedi', sub: xhr.status === 401 ? 'Eşleşme geçersiz. Windows uygulamasındaki QR kodunu yeniden okutun.' : (result && result.error) || 'Bilgisayara kaydedilemedi. Yeniden deneyin.' });
+      }
+      finish();
+    };
+    xhr.onerror = () => { setProgress({ state: 'fail', label: 'Bağlantı kesildi', sub: 'Telefon ve bilgisayarın aynı Wi-Fi ağında olduğundan ve multiOS’un çalıştığından emin olun.' }); finish(); };
+    function finish() {
+      uploading = false;
+      for (const id of ['pick', 'filePick']) $(id).classList.remove('busy');
+      for (const id of ['photos', 'file']) { $(id).disabled = false; $(id).value = ''; }
+      $('retryUpload').hidden = !retryFiles.length;
+      holdScreen(false);
+    }
+    xhr.open('POST', '/api/upload?t=' + encodeURIComponent(TOKEN));
+    xhr.send(form);
+  }
+  for (const id of ['photos', 'file']) $(id).addEventListener('change', () => uploadFiles(Array.from($(id).files || [])));
+  $('retryUpload').addEventListener('click', () => uploadFiles(retryFiles));
+
+  /* Outbound: Files staged on PC to download to Phone */
+  async function fetchOutbound() {
+    try {
+      const r = await fetch('/api/outbound?t=' + encodeURIComponent(TOKEN), { cache: 'no-store' });
+      if (r.ok) {
+        const j = await r.json();
+        renderOutbound(j.files || []);
+      }
+    } catch {}
+  }
+
+  function renderOutbound(files) {
+    const feed = $('phoneOutboundFeed');
+    feed.replaceChildren();
+    $('outboundEmpty').hidden = files.length > 0;
+    $('clearOutbound').disabled = !files.length;
+    for (const file of files) {
+      const card = document.createElement('div'); card.className = 'phone-outbound-card';
+      const image = document.createElement('img'); image.className = 'phone-outbound-thumb'; image.alt = '';
+      image.src = file.thumbnailUrl + '?t=' + encodeURIComponent(TOKEN);
+      image.onerror = () => { image.style.display = 'none'; };
+      const info = document.createElement('div'); info.className = 'phone-outbound-info';
+      const name = document.createElement('span'); name.className = 'phone-outbound-name'; name.textContent = file.name;
+      const meta = document.createElement('span'); meta.className = 'phone-outbound-meta'; meta.textContent = fmt(file.size) + ' · İndirmeye hazır';
+      info.append(name, meta);
+      const download = document.createElement('a'); download.className = 'phone-outbound-dl'; download.textContent = 'İndir';
+      download.href = '/api/outbound/download/' + encodeURIComponent(file.id) + '?t=' + encodeURIComponent(TOKEN);
+      download.download = file.name;
+      card.append(image, info, download); feed.append(card);
+    }
+  }
+
+  let clipboardItem = null;
+  let clipboardSending = false;
+  function clipboardFeedback(message, state = '') {
+    $('clipFeedback').textContent = message;
+    $('clipFeedback').dataset.state = state;
+  }
+  function updateClipboardControls() {
+    $('phoneSendBtn').disabled = clipboardSending || !$('phoneSendInput').value.trim();
+    $('phoneClipPhotoInput').disabled = clipboardSending;
+    $('clipPhotoPick').classList.toggle('busy', clipboardSending);
+  }
+  function applyClipboardItem(item) {
+    clipboardItem = item;
+    const hasText = item && item.type === 'text' && typeof item.text === 'string' && item.text.length > 0;
+    const hasImage = item && item.type === 'image';
+    $('phoneClipCopy').hidden = !!hasImage;
+    $('phoneClipCopy').disabled = !hasText;
+    $('clearClipboard').disabled = !item;
+    $('phoneClipThumb').style.display = hasImage ? 'block' : 'none';
+    $('phoneClipDownload').style.display = hasImage ? 'inline-flex' : 'none';
+    if (hasImage) {
+      const url = '/api/clipboard/image?t=' + encodeURIComponent(TOKEN) + '&ts=' + (item.ts || Date.now());
+      $('phoneClipThumb').src = url; $('phoneClipDownload').href = url;
+      const details = [];
+      if (item.width && item.height) details.push(item.width + ' × ' + item.height + ' px');
+      if (item.size) details.push(fmt(item.size));
+      $('phoneClipText').textContent = 'Görsel' + (details.length ? ' · ' + details.join(' · ') : '');
+    } else {
+      $('phoneClipThumb').removeAttribute('src'); $('phoneClipDownload').removeAttribute('href');
+      $('phoneClipText').textContent = hasText ? item.text : 'Bilgisayarda bir metin veya görsel kopyaladığınızda burada görünür.';
+    }
+  }
+  async function fetchClipboard() {
+    try {
+      const response = await fetch('/api/clipboard?t=' + encodeURIComponent(TOKEN), { cache: 'no-store' });
+      if (!response.ok) throw new Error();
+      applyClipboardItem((await response.json()).item);
+    } catch { clipboardFeedback('Pano alınamadı. Bilgisayar bağlantısını kontrol edin.', 'error'); }
+  }
+  $('phoneClipCopy').addEventListener('click', async () => {
+    if (!clipboardItem || clipboardItem.type !== 'text') return;
+    const copied = await copyText(clipboardItem.text);
+    clipboardFeedback(copied ? 'Metin telefon panosuna kopyalandı.' : 'Kopyalanamadı. Yukarıdaki metne basılı tutarak kopyalayabilirsiniz.', copied ? 'success' : 'error');
+  });
+  $('phoneSendInput').addEventListener('input', updateClipboardControls);
+  async function sendClipboard(body, headers, successMessage) {
+    if (clipboardSending) return false;
+    clipboardSending = true; updateClipboardControls();
+    clipboardFeedback('Windows panosuna gönderiliyor…');
+    try {
+      const response = await fetch('/api/clipboard?t=' + encodeURIComponent(TOKEN), { method: 'POST', headers, body });
+      let result;
+      try { result = await response.json(); } catch {}
+      if (!response.ok || !result || !result.ok) throw new Error(response.status === 401 ? 'Eşleşme geçersiz. QR kodunu yeniden okutun.' : result && result.error || 'Gönderilemedi. Yeniden deneyin.');
+      await fetchClipboard();
+      clipboardFeedback(successMessage, 'success');
+      return true;
+    } catch (error) {
+      clipboardFeedback(error instanceof TypeError ? 'Bağlantı kesildi. Bilgisayarı kontrol edip yeniden deneyin.' : error.message, 'error');
+      return false;
+    } finally { clipboardSending = false; updateClipboardControls(); }
+  }
+  $('phoneSendBtn').addEventListener('click', async () => {
+    const text = $('phoneSendInput').value.trim();
+    if (!text) return;
+    if (await sendClipboard(JSON.stringify({ text }), { 'Content-Type': 'application/json' }, 'Metin Windows panosuna gönderildi.')) {
+      if ($('phoneSendInput').value.trim() === text) $('phoneSendInput').value = '';
+      updateClipboardControls();
+    }
+  });
+  $('phoneClipPhotoInput').addEventListener('change', async () => {
+    const input = $('phoneClipPhotoInput'); const file = input.files && input.files[0];
+    if (!file) return;
+    const form = new FormData(); form.append('file', file, file.name);
+    await sendClipboard(form, undefined, 'Görsel Windows panosuna gönderildi.');
+    input.value = '';
+  });
+  updateClipboardControls();
+
+  /* Real-time SSE Sync */
+  function connectSse() {
+    try {
+      const es = new EventSource('/api/events?t=' + encodeURIComponent(TOKEN));
+      es.addEventListener('clipboard', (e) => {
+        applyClipboardItem(JSON.parse(e.data));
+      });
+      es.addEventListener('outbound', () => {
+        fetchOutbound();
+      });
+      es.addEventListener('history-cleared', fetchHistory);
+      es.addEventListener('transfer', (e) => { if (JSON.parse(e.data).state !== 'active') fetchHistory(); });
+    } catch {}
+  }
+
+  renderUrl();
+  ping();
+  fetchClipboard();
+  fetchHistory();
+  renderOutbound(INITIAL_OUTBOUND);
+  fetchOutbound();
+  connectSse();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+/* Shared theme and typography for the iPhone page. */
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  --text-body:        1.0625rem;
+  --tracking-normal:  0em;
+  --leading-normal: 1.35;
+  --blue:   #007AFF;
+  --accent: var(--blue);
+  --bg:            #FFFFFF;
+  --label:            rgba(0, 0, 0, 1);
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --blue:   #0A84FF;
+    --bg:            #000000;
+    --label:            rgba(255, 255, 255, 1);
+  }
+}
+[data-theme="dark"] {
+  --blue:#0A84FF;
+  --bg:#000;
+  --label:rgba(255,255,255,1);
+}
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-size: var(--text-body);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-normal);
+  color: var(--label);
+  background: var(--bg);
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

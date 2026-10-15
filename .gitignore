@@ -1,0 +1,9 @@
+node_modules/
+*.multios-part
+scratch/
+test-results/
+.env
+.env.*
+*.log
+src/native/*.exe
+dist/
