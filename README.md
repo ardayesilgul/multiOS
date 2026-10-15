@@ -3,6 +3,8 @@
 
 <h1 align="center">multiOS</h1>
 
+<br clear="both">
+
 <p align="center"><strong>Türkçe</strong> · <a href="README.en.md">English</a></p>
 
 iPhone ve Windows arasında yerel ağ üzerinden fotoğraf, dosya ve pano içeriği
@@ -13,11 +15,11 @@ Dosyalar doğrudan cihazlar arasında aktarılır; bulut hesabı gerekmez.
 
 ### Windows
 
-<a href="assets/screenshots/windows-light.png">
+<a href="assets/screenshots/windows-wide-light.png">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/windows-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/windows-light.png">
-    <img alt="Windows · Gelen dosyalar" src="assets/screenshots/windows-light.png" width="100%">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/windows-wide-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/windows-wide-light.png">
+    <img alt="Windows · Gelen dosyalar" src="assets/screenshots/windows-wide-light.png" width="100%">
   </picture>
 </a>
 

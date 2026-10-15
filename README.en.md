@@ -3,6 +3,8 @@
 
 <h1 align="center">multiOS</h1>
 
+<br clear="both">
+
 <p align="center"><a href="README.md">Türkçe</a> · <strong>English</strong></p>
 
 Share photos, files and clipboard content between an iPhone and Windows over your
@@ -13,11 +15,11 @@ directly between devices; no cloud account is required.
 
 ### Windows
 
-<a href="assets/screenshots/windows-light.png">
+<a href="assets/screenshots/windows-wide-light.png">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/windows-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/windows-light.png">
-    <img alt="Windows · Received files" src="assets/screenshots/windows-light.png" width="100%">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/windows-wide-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/windows-wide-light.png">
+    <img alt="Windows · Received files" src="assets/screenshots/windows-wide-light.png" width="100%">
   </picture>
 </a>
 
