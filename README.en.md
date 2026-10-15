@@ -1,27 +1,25 @@
-<img align="left" src="assets/multios.png" alt="multiOS" width="56">
+<img align="left" src="assets/multios.png" alt="multiOS" width="88" height="88">
+<img align="right" src="assets/header-spacer.svg" alt="" width="88" height="88">
 
 <h1 align="center">multiOS</h1>
 
 <p align="center"><a href="README.md">Türkçe</a> · <strong>English</strong></p>
 
-I built multiOS to share photos, files and clipboard content between my iPhone
-and Windows PC. Both devices connect over the same local network, with no cloud
-account needed. Closing the window keeps the app in the system tray, ready to
-receive files.
+Share photos, files and clipboard content between an iPhone and Windows over your
+local network. Windows uses a native WPF window and system tray. Files travel
+directly between devices; no cloud account is required.
 
 ## Screenshots
 
 ### Windows
 
-<p align="center">
 <a href="assets/screenshots/windows-light.png">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/windows-dark.png">
     <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/windows-light.png">
-    <img alt="Windows · Received files" src="assets/screenshots/windows-light.png" width="600">
+    <img alt="Windows · Received files" src="assets/screenshots/windows-light.png" width="100%">
   </picture>
 </a>
-</p>
 
 ### Phone
 
@@ -84,11 +82,12 @@ only the service. Closing the window hides it while receiving continues. Use
    personal upload address, then add the linked **PC'ye Gönder** shortcut. Paste
    that address into its setup question and finish adding it. This is a one-time step.
 
-You only need to pair once; the connection survives restarts and updates.
-You can also save the phone page to your Home Screen.
-
-Try `multios.local` first. If it doesn't resolve on your network, use the IP
-address instead. If the PC's IP changes, update the address in the shortcut.
+The shared shortcut asks for a personal upload address during setup. It must
+include the pairing key copied from the phone page. The key persists across restarts and updates,
+so repeated pairing is unnecessary. Prefer `multios.local` when it resolves on
+your network; an IP-based shortcut address must be updated if the PC's IP changes.
+Save the phone page to the Home Screen for convenient access.
+`MULTIOS_SHORTCUT_URL` overrides the default iCloud shortcut link.
 
 ## Standalone build
 
@@ -97,13 +96,15 @@ npm ci
 npm run build:dist
 ```
 
-The package is saved to `dist/multiOS.exe`. Building it requires internet access.
-Opening the EXE installs the app under `%LOCALAPPDATA%/multiOS/app` and adds
-Desktop and Start Menu shortcuts.
+Output: `dist/multiOS.exe`. The build installs only production dependencies in
+a temporary staging folder and downloads the matching Node.js license from the
+official Node.js repository; internet access is required. Running the package
+extracts files to `%LOCALAPPDATA%/multiOS/app`, creates Desktop and Start Menu
+shortcuts, and opens the native window.
 
-To update an existing installation, use `scripts/update-local.ps1`. It makes a
-backup, installs the new package and preserves pairing. It won't update while
-a transfer is running.
+For an existing local installation, `scripts/update-local.ps1` backs it up under
+`%LOCALAPPDATA%/multiOS/backups`, stops it, installs the new package and verifies
+that the pairing key was preserved. It refuses to update during an active transfer.
 
 ## Data and security
 
@@ -130,29 +131,26 @@ npx playwright install chromium
 npm run test:ui
 ```
 
-API tests check transfers, pairing, receive folders and history. Phone UI tests
-cover sending, downloading, clipboard controls and light/dark themes. Tests use
-temporary data without touching your personal files or Windows clipboard.
-
-To use installed Edge instead of downloading Chromium:
+Tests start isolated services and use temporary data without touching the real
+clipboard, startup settings or shortcuts. API checks cover authorization,
+uploads, interrupted transfers, duplicate names, persistence, cleanup and receive
+folders. The phone UI test covers upload/download, controls, light/dark layouts
+and overflow; screenshots go to ignored `test-results/`. To use installed Edge:
 
 ```powershell
 $env:MULTIOS_BROWSER_CHANNEL = 'msedge'
 npm run test:ui
 ```
 
-<details>
-<summary>Desktop UI test</summary>
+Native `--capture <absolute-png-path> --verify` checks title text hit testing,
+closing to the tray, receiving with the window hidden, navigation, staging and
+clipboard display, then exits through the tray. Use isolated `MULTIOS_PORT`,
+`MULTIOS_DATA_DIR`, `MULTIOS_DROP_DIR` and `MULTIOS_STAGED_DIR`, with
+`MULTIOS_DISABLE_CLIPBOARD=1` and `MULTIOS_DISABLE_MDNS=1`.
 
-`--capture <absolute-png-path> --verify` checks closing to the tray, receiving
-with the window hidden, navigation, staging and clipboard display. It exits
-through the tray when finished.
-
-Use isolated `MULTIOS_PORT`, `MULTIOS_DATA_DIR`, `MULTIOS_DROP_DIR` and
-`MULTIOS_STAGED_DIR`, with `MULTIOS_DISABLE_CLIPBOARD=1` and
-`MULTIOS_DISABLE_MDNS=1`.
-
-</details>
+Real iPhone permissions, shortcut installation, Wi-Fi changes, sleep/resume,
+HEIC codecs and long videos still need device checks. Automated checks do not
+cover every Windows configuration.
 
 ## Project layout
 
