@@ -1,10 +1,22 @@
-# multiOS
+<p align="center">
+  <img src="assets/multios.png" alt="multiOS" width="104">
+</p>
 
-**Türkçe** · [English](README.en.md)
+<h1 align="center">multiOS</h1>
+
+<p align="center"><strong>Türkçe</strong> · <a href="README.en.md">English</a></p>
 
 iPhone ve Windows arasında yerel ağ üzerinden fotoğraf, dosya ve pano içeriği
 paylaşın. Windows uygulaması yerel bir WPF penceresi ve sistem tepsisiyle çalışır.
 Dosyalar doğrudan cihazlar arasında aktarılır; bulut hesabı gerekmez.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/windows-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/windows-light.png">
+  <img alt="multiOS Windows uygulamasında gelen dosyalar" src="assets/screenshots/windows-light.png" width="960">
+</picture>
+
+*Örnek dosyalarla alınmış gerçek Windows uygulaması görüntüsü.*
 
 ## Gereksinimler
 
@@ -50,6 +62,23 @@ ve güncellemelerde korunur; her kullanımda eşleştirme gerekmez. Ağınızda 
 değiştiğinde kestirmedeki adresi de güncellemeniz gerekir.
 Kolay erişim için telefon sayfasını Ana Ekran'a ekleyebilirsiniz.
 `MULTIOS_SHORTCUT_URL` ortam değişkeni, varsayılan iCloud kestirme bağlantısını değiştirir.
+
+## Telefon arayüzü
+
+Telefon sayfasından Windows'a fotoğraf veya dosya gönderin, hazırlanan dosyaları
+indirin ve pano içeriğini paylaşın. Üstteki **Dosyalar / Pano** bağlantılarıyla
+ilgili bölüme doğrudan ulaşabilirsiniz.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/phone-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/phone-light.png">
+    <img alt="multiOS telefon sayfasında dosya paylaşımı ve pano kontrolleri" src="assets/screenshots/phone-light.png" width="320">
+  </picture>
+</p>
+
+*Telefon sayfasının örnek verilerle, mobil tarayıcı boyutunda alınmış görüntüsü;
+gerçek bir iPhone'dan alınmamıştır. Görseller GitHub temanıza göre değişir.*
 
 ## Tek dosyalık uygulama paketi oluşturma
 

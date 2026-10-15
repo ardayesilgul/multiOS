@@ -1,10 +1,22 @@
-# multiOS
+<p align="center">
+  <img src="assets/multios.png" alt="multiOS" width="104">
+</p>
 
-[Türkçe](README.md) · **English**
+<h1 align="center">multiOS</h1>
+
+<p align="center"><a href="README.md">Türkçe</a> · <strong>English</strong></p>
 
 Share photos, files and clipboard content between an iPhone and Windows over your
 local network. Windows uses a native WPF window and system tray. Files travel
 directly between devices; no cloud account is required.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/windows-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/windows-light.png">
+  <img alt="multiOS on Windows showing received files" src="assets/screenshots/windows-light.png" width="960">
+</picture>
+
+*The native Windows app, captured with sample files.*
 
 ## Requirements
 
@@ -44,6 +56,23 @@ so repeated pairing is unnecessary. Prefer `multios.local` when it resolves on
 your network; an IP-based shortcut address must be updated if the PC's IP changes.
 Save the phone page to the Home Screen for convenient access.
 `MULTIOS_SHORTCUT_URL` overrides the default iCloud shortcut link.
+
+## Phone interface
+
+Send photos or files to Windows, download prepared files, and exchange clipboard
+content from the phone page. The **Files / Clipboard** links provide quick access
+to each section.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/phone-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/phone-light.png">
+    <img alt="multiOS mobile browser page showing file sharing and clipboard controls" src="assets/screenshots/phone-light.png" width="320">
+  </picture>
+</p>
+
+*The actual phone page rendered in a mobile browser viewport with sample data.
+This is not a capture from a physical iPhone. Images follow your GitHub theme.*
 
 ## Standalone build
 
