@@ -10,13 +10,50 @@ iPhone ve Windows arasında yerel ağ üzerinden fotoğraf, dosya ve pano içeri
 paylaşın. Windows uygulaması yerel bir WPF penceresi ve sistem tepsisiyle çalışır.
 Dosyalar doğrudan cihazlar arasında aktarılır; bulut hesabı gerekmez.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/windows-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/windows-light.png">
-  <img alt="multiOS Windows uygulamasında gelen dosyalar" src="assets/screenshots/windows-light.png" width="960">
-</picture>
+## Uygulamaya göz atın
 
-*Örnek dosyalarla alınmış gerçek Windows uygulaması görüntüsü.*
+### Windows
+
+<a href="assets/screenshots/windows-light.png">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/windows-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/windows-light.png">
+    <img alt="Windows · Gelen dosyalar" src="assets/screenshots/windows-light.png" width="100%">
+  </picture>
+</a>
+
+### Telefon
+
+Fotoğraf ve dosya aktarımı ile pano paylaşımı, ayrı bölümlerde.
+
+<table>
+  <tr>
+    <th width="50%">Dosyalar</th>
+    <th width="50%">Pano</th>
+  </tr>
+  <tr>
+    <td valign="top"><a href="assets/screenshots/phone-files-light.png">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/phone-files-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/phone-files-light.png">
+    <img alt="Telefon · Dosya gönderme ve indirme" src="assets/screenshots/phone-files-light.png" width="100%">
+  </picture>
+</a></td>
+    <td valign="top"><a href="assets/screenshots/phone-clipboard-light.png">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/phone-clipboard-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/phone-clipboard-light.png">
+    <img alt="Telefon · Pano paylaşımı" src="assets/screenshots/phone-clipboard-light.png" width="100%">
+  </picture>
+</a></td>
+  </tr>
+  <tr>
+    <td>Fotoğraf gönderin, hazırlanan dosyaları indirin.</td>
+    <td>Metin ve görselleri iki yönde paylaşın.</td>
+  </tr>
+</table>
+
+*Örnek verilerle alınmış gerçek arayüz görüntüleri. Telefon görüntüleri mobil tarayıcı boyutunda alınmıştır; fiziksel iPhone çekimi değildir. Görseller GitHub temanıza uyum sağlar. Tam boy incelemek için görsele tıklayın.*
 
 ## Gereksinimler
 
@@ -62,23 +99,6 @@ ve güncellemelerde korunur; her kullanımda eşleştirme gerekmez. Ağınızda 
 değiştiğinde kestirmedeki adresi de güncellemeniz gerekir.
 Kolay erişim için telefon sayfasını Ana Ekran'a ekleyebilirsiniz.
 `MULTIOS_SHORTCUT_URL` ortam değişkeni, varsayılan iCloud kestirme bağlantısını değiştirir.
-
-## Telefon arayüzü
-
-Telefon sayfasından Windows'a fotoğraf veya dosya gönderin, hazırlanan dosyaları
-indirin ve pano içeriğini paylaşın. Üstteki **Dosyalar / Pano** bağlantılarıyla
-ilgili bölüme doğrudan ulaşabilirsiniz.
-
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/phone-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/phone-light.png">
-    <img alt="multiOS telefon sayfasında dosya paylaşımı ve pano kontrolleri" src="assets/screenshots/phone-light.png" width="320">
-  </picture>
-</p>
-
-*Telefon sayfasının örnek verilerle, mobil tarayıcı boyutunda alınmış görüntüsü;
-gerçek bir iPhone'dan alınmamıştır. Görseller GitHub temanıza göre değişir.*
 
 ## Tek dosyalık uygulama paketi oluşturma
 
