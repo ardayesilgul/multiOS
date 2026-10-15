@@ -28,7 +28,7 @@ Write-Host "--> 2. Uygulama demeti (bundle) sikistiriliyor..."
 $tempStaging = Join-Path $env:TEMP ("multios_stage_" + [Guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $tempStaging -Force | Out-Null
 
-foreach ($name in @('package.json', 'README.md', 'LICENSE')) { Copy-Item -LiteralPath (Join-Path $root $name) -Destination $tempStaging }
+foreach ($name in @('package.json', 'README.md', 'README.en.md', 'LICENSE')) { Copy-Item -LiteralPath (Join-Path $root $name) -Destination $tempStaging }
 Copy-Item -Path (Join-Path $root "src") -Destination (Join-Path $tempStaging "src") -Recurse -Force
 Copy-Item -Path (Join-Path $root "public") -Destination (Join-Path $tempStaging "public") -Recurse -Force
 # Keep browser test tools out of the distributable.
