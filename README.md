@@ -1,9 +1,7 @@
 <img align="left" src="assets/multios.png" alt="multiOS" width="88" height="88">
 <img align="right" src="assets/header-spacer.svg" alt="" width="88" height="88">
 
-<h1 align="center">multiOS</h1>
-
-<br clear="both">
+<h1 align="center">multiOS<br clear="both"></h1>
 
 <p align="center"><strong>Türkçe</strong> · <a href="README.en.md">English</a></p>
 
