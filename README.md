@@ -4,6 +4,8 @@
 
 <p align="center"><strong>Türkçe</strong> · <a href="README.en.md">English</a></p>
 
+# multiOS ile iPhone ve Windows arasında dosya paylaşımı
+
 iPhone ve Windows arasında yerel ağ üzerinden fotoğraf, dosya ve pano içeriği
 paylaşın. Windows uygulaması yerel bir WPF penceresi ve sistem tepsisiyle çalışır.
 Dosyalar doğrudan cihazlar arasında aktarılır; bulut hesabı gerekmez.
