@@ -180,3 +180,7 @@ MIT; bkz. [LICENSE](LICENSE). Apple gezinme simgesinin atfı
 [assets/NOTICE.md](assets/NOTICE.md) dosyasındadır. Bağımlılıkların kendi lisansları,
 paket içindeki `node_modules` klasöründe korunur. Pakete eklenen Node.js'in lisansı
 `runtime/LICENSE` dosyasındadır.
+
+---
+
+**Geliştirici:** [Arda Yeşilgül](https://github.com/ardayesilgul).

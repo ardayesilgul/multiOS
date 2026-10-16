@@ -165,3 +165,7 @@ cover every Windows configuration.
 MIT; see [LICENSE](LICENSE). Apple navigation icon attribution is in
 [assets/NOTICE.md](assets/NOTICE.md). Dependencies retain their licenses in the
 packaged `node_modules`; the bundled Node.js license is in `runtime/LICENSE`.
+
+---
+
+**Developer:** [Arda Yeşilgül](https://github.com/ardayesilgul).
