@@ -47,8 +47,6 @@ function snapshot(t) {
   };
 }
 
-// Tracks one HTTP upload. All numbers come from bytes actually read off the
-// socket; nothing here is simulated.
 function begin({ id, total, from }) {
   const t = {
     id,

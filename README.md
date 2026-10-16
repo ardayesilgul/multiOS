@@ -1,13 +1,14 @@
-<img align="left" src="assets/multios.png" alt="multiOS" width="88" height="88">
-<img align="right" src="assets/header-spacer.svg" alt="" width="88" height="88">
-
-<h1 align="center">multiOS<br clear="both"></h1>
+<p>
+  <img src="assets/readme-header.svg" alt="multiOS" width="100%">
+</p>
 
 <p align="center"><strong>Türkçe</strong> · <a href="README.en.md">English</a></p>
 
 iPhone ve Windows arasında yerel ağ üzerinden fotoğraf, dosya ve pano içeriği
 paylaşın. Windows uygulaması yerel bir WPF penceresi ve sistem tepsisiyle çalışır.
 Dosyalar doğrudan cihazlar arasında aktarılır; bulut hesabı gerekmez.
+
+[**Windows için indir · v0.2.0**](https://github.com/ardayesilgul/multiOS/releases/latest/download/multiOS.exe)
 
 ## Ekran görüntüleri
 
@@ -50,19 +51,39 @@ Dosyalar doğrudan cihazlar arasında aktarılır; bulut hesabı gerekmez.
   </tr>
 </table>
 
-## Gereksinimler
+## Kurulum
 
-- Windows 10 veya 11, 64 bit ve .NET Framework 4.8.
-- Geliştirme için Node.js 22 veya üzeri ve npm. Paketlenmiş uygulama Node.js'i içerir.
-- iPhone ve bilgisayar aynı güvenilir yerel ağda olmalıdır. Windows Güvenlik
-  Duvarı'nda özel ağlar için uygulamaya izin verin. Misafir Wi-Fi ağları cihazlar
-  arasındaki bağlantıyı engelleyebilir.
-- HEIC önizlemeleri Windows'ta yüklü görüntü kodeklerine bağlıdır; özgün dosyayı
-  almak için önizleme desteği gerekmez.
+Windows 10/11 (64 bit) ve .NET Framework 4.8 gerekir. EXE'yi açtığınızda uygulama
+kurulur ve Masaüstü'ne kısayol eklenir. Node.js kurmanız gerekmez.
 
-## Kaynak koddan çalıştırma
+Pencereyi kapatmak uygulamayı sistem tepsisine gizler; dosya almaya devam eder.
+Tamamen kapatmak için tepsiden **Çıkış**'ı seçin.
 
-Repoyu klonlayın, proje klasöründe PowerShell'i açın ve şu komutları çalıştırın:
+## iPhone'u bağlama
+
+1. Telefon ve bilgisayarı aynı Wi-Fi ağına bağlayın.
+2. multiOS'ta **iPhone** bölümünü açıp QR kodunu okutun.
+3. Safari'de açılan sayfadan fotoğraf ve dosya gönderin, bilgisayardaki dosyaları
+   indirin veya panoyu paylaşın.
+
+Paylaş menüsünden göndermek için telefon sayfasındaki **Paylaş menüsü kurulumu**
+bölümünü açın. Kişisel adresi kopyalayın, **PC'ye Gönder** kestirmesini ekleyin ve
+kurulum sorusuna adresi yapıştırın. Bu işlem bir kez yapılır; eşleşme güncellemelerde korunur.
+
+`multios.local` ağınızda çalışmazsa IP adresini kullanabilirsiniz. IP değişirse
+kestirmedeki adresi de güncellemeniz gerekir. Windows Güvenlik Duvarı'nda özel ağlar
+için uygulamaya izin verin.
+
+## Dosyalar ve gizlilik
+
+- Gelen dosyalar `İndirilenler/multiOS` klasörüne kaydedilir. Ayarlar'dan başka bir klasör seçebilirsiniz.
+- Uygulama açıkken Windows panosu eşleşmiş telefondan erişilebilir.
+- Aktarımlar yerel HTTP kullanır. Güvenilir bir özel ağ kullanın; servisi internete açmayın.
+- HEIC önizlemesi Windows kodeklerine bağlıdır; dosyayı almak için kodek gerekmez.
+
+[Verilerin saklandığı konumlar ve temizleme işlemleri](docs/data.md)
+
+## Geliştirme
 
 ```powershell
 npm ci
@@ -70,109 +91,12 @@ npm run build:native
 npm start
 ```
 
-Derleme, Windows'un .NET Framework derleyicisiyle masaüstü uygulamasını, pano
-yardımcısını ve küçük resim yardımcısını oluşturur. Visual Studio kurulumu gerekmez.
-`npm run tray` yerel uygulamayı ve servisi başlatır. `npm run start:silent` yalnızca
-servisi başlatır. Pencereyi kapattığınızda uygulama gizlenir ve dosya almaya devam
-eder. Uygulamayı ve servisi tamamen durdurmak için sistem tepsisinden **Çıkış**'ı
-seçin. Windows açılışında başlatma, Ayarlar'dan isteğe bağlı olarak açılır.
-
-## iPhone'u bağlama
-
-1. multiOS'ta **iPhone** bölümünü açıp QR kodunu telefonunuzla okutun.
-2. Açılan sayfayı Safari'de kullanarak dosya gönderin veya bilgisayarda hazırlanan
-   dosyaları indirin.
-3. iOS Paylaş menüsünden göndermek için **Paylaş menüsü kurulumu** bölümünü açın.
-   Önce kişisel gönderim adresini kopyalayın, ardından bağlantıdaki **PC'ye Gönder**
-   kestirmesini ekleyin. Kurulum sorusuna kopyaladığınız adresi yapıştırıp kurulumu
-   tamamlayın. Bu işlem yalnızca bir kez yapılır.
-
-Paylaşılan kestirme, kurulumda kişisel gönderim adresinizi sorar. Bu adres telefon
-sayfasından kopyalanan eşleşme anahtarını da içermelidir. Anahtar yeniden başlatma
-ve güncellemelerde korunur; her kullanımda eşleştirme gerekmez. Ağınızda çalışıyorsa
-`multios.local` adresini tercih edin. IP adresini kullanırsanız bilgisayarın IP'si
-değiştiğinde kestirmedeki adresi de güncellemeniz gerekir.
-Kolay erişim için telefon sayfasını Ana Ekran'a ekleyebilirsiniz.
-`MULTIOS_SHORTCUT_URL` ortam değişkeni, varsayılan iCloud kestirme bağlantısını değiştirir.
-
-## Tek dosyalık uygulama paketi oluşturma
+Geliştirme için Node.js 22 veya üzeri gerekir.
+[Derleme ve paketleme](docs/development.md) · [Test ayrıntıları](docs/testing.md)
 
 ```powershell
-npm ci
-npm run build:dist
-```
-
-Çıktı `dist/multiOS.exe` dosyasıdır. Derleme, geçici bir klasöre yalnızca uygulamanın
-çalışması için gereken bağımlılıkları kurar ve pakete eklenen Node.js sürümünün
-lisansını resmî Node.js reposundan indirir; internet bağlantısı gerekir. Paketi
-çalıştırdığınızda dosyalar `%LOCALAPPDATA%/multiOS/app` altına açılır, Masaüstü ve
-Başlat menüsü kısayolları oluşturulur ve yerel uygulama penceresi açılır.
-
-Mevcut yerel kurulumu güncellemek için `scripts/update-local.ps1` kullanılabilir.
-Script, kurulumu `%LOCALAPPDATA%/multiOS/backups` altına yedekler, uygulamayı
-durdurur, yeni paketi yükler ve eşleşme anahtarının korunduğunu doğrular. Devam
-eden bir aktarım varsa güncellemeyi başlatmaz.
-
-## Veriler ve güvenlik
-
-- Gelen dosyalar varsayılan olarak `İndirilenler/multiOS` klasörüne kaydedilir.
-  Ayarlar'dan Masaüstü'ndeki bir klasör dâhil, yazma izniniz olan herhangi bir
-  klasörü seçebilirsiniz. Önceden alınan dosyalar yerlerinde kalır.
-- Eşleşme bilgileri, geçmiş, pano önbelleği ve gönderim için hazırlanan dosya
-  kopyaları `%APPDATA%/multiOS` altında tutulur. Bu klasörü ve kişisel eşleşme
-  bağlantılarınızı başkalarıyla paylaşmayın.
-- Gelen dosya geçmişini temizlemek özgün dosyaları silmez. Gönderim listesini
-  temizlemek kaynakları değil, hazırlanmış kopyaları siler. Uygulamadaki pano
-  kaydını temizlemek Windows panosunu değiştirmez.
-- Telefondan gelen istekler eşleşme anahtarı gerektirir. Yerel masaüstü kontrolü
-  yalnızca aynı bilgisayardan, yerel Host başlığıyla erişilebilir. Farklı web
-  kaynaklarından gelen tarayıcı istekleri reddedilir.
-- Aktarımlar şifreli HTTPS yerine yerel HTTP kullanır. Güvenilir bir özel ağ
-  kullanın; servisi port yönlendirmeyle internete açmayın veya herkese açık bir
-  sunucu olarak kullanmayın.
-- Pano yardımcısı çalışırken Windows panosunu izler. Güncel pano içeriğine
-  eşleşmiş cihazlar erişebilir. Durdurmak için tepsiden **Çıkış**'ı seçin.
-  Telefondan panoya her istekte en fazla 50 MB boyutunda tek bir görsel gönderilebilir.
-
-## Doğrulama
-
-```powershell
-npm run build:native
 npm test
-npx playwright install chromium
-npm run test:ui
 ```
-
-Testler ayrı servisler başlatıp geçici veriler kullanır; gerçek panoya, başlangıç
-ayarlarına veya kısayollara dokunmaz. API kontrolleri yetkilendirme, dosya yükleme,
-kesilen aktarımlar, yinelenen adlar, kalıcı kayıtlar, temizleme ve kayıt klasörü
-seçimini kapsar. Telefon arayüz testleri gönderme/indirme, kontroller, açık/koyu
-görünüm ve taşmaları kontrol eder. Ekran görüntüleri Git'e alınmayan `test-results/`
-klasörüne yazılır. Yüklü Edge'i kullanmak için:
-
-```powershell
-$env:MULTIOS_BROWSER_CHANNEL = 'msedge'
-npm run test:ui
-```
-
-Yerel uygulamanın `--capture <tam-png-yolu> --verify` modu; başlık yazısına
-tıklamayı, pencereyi kapatıp tepsiye gizlemeyi, pencere gizliyken dosya almayı,
-gezinmeyi, gönderilecek dosya hazırlamayı ve pano gösterimini kontrol eder;
-ardından tepsideki çıkış işlemini çalıştırır. Bu modu ayrı `MULTIOS_PORT`,
-`MULTIOS_DATA_DIR`, `MULTIOS_DROP_DIR` ve `MULTIOS_STAGED_DIR` değerleriyle,
-`MULTIOS_DISABLE_CLIPBOARD=1` ve `MULTIOS_DISABLE_MDNS=1` ayarlarını kullanarak çalıştırın.
-
-Gerçek iPhone izinleri, kestirme kurulumu, Wi-Fi değişiklikleri, uyku/uyanma,
-HEIC kodekleri ve uzun videolar cihaz üzerinde ayrıca kontrol edilmelidir.
-Otomatik kontroller her Windows yapılandırmasını kapsamaz.
-
-## Proje yapısı
-
-- `src/native/`: WPF uygulaması, yardımcılar ve paket başlatıcısı.
-- `src/`: HTTP servisi, eşleşme, dosya saklama ve aktarım durumu.
-- `public/`: iPhone sayfası ve stilleri.
-- `scripts/`: derleme ve yerel kurulum araçları.
-- `tests/`: ayrı servislerle çalışan API ve telefon arayüz testleri.
 
 ## Lisans
 

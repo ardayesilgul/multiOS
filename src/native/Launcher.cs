@@ -98,7 +98,6 @@ namespace MultiOS
                     }
                 }
 
-                // Arka plan sistem tepsisi süpervizörünü başlat
                 string trayExe = Path.Combine(localAppDir, "src", "native", "multios-tray.exe");
                 if (File.Exists(trayExe))
                 {

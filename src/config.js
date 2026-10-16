@@ -4,8 +4,6 @@ const os = require('os');
 const path = require('path');
 const fs = require('fs');
 
-// Single source of truth for the product name. Renaming the app later only
-// requires changing these two constants (HTML templates use {{APP_NAME}}).
 const APP_NAME = 'multiOS';
 const APP_SLUG = 'multios';
 const APP_VERSION = require('../package.json').version;
