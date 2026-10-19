@@ -33,3 +33,11 @@ This document details the network transport, device discovery, and communication
 | `CONNECTED` | WebSocket ack | Mobile handshake confirmed | Session token validated |
 | `TRANSFER` | Chunk stream | User drops media / file | Payload checksum & path verification |
 | `DISCONNECT` | Ping timeout | Network drop / window closed | Ephemeral pairing invalidated on revoke |
+
+
+## Interface Selection & Multihoming Behavior
+
+When multiple network adapters are active (e.g. Wi-Fi + Ethernet / Hyper-V virtual bridge):
+1. **Enumeration:** multiOS queries `os.networkInterfaces()` filtering out non-IPv4, loopback, and APIPA (`169.254.x.x`) addresses.
+2. **Preference:** Wireless adapters matching standard 802.11 SSID broadcasts take precedence for mobile device alignment.
+3. **Fallback:** If multi-subnet bridging is detected, the desktop UI provides an interface selector dropdown in the Diagnostics view.
