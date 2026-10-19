@@ -54,3 +54,9 @@ To prevent channel contention on crowded 2.4 GHz bands:
 
 - Sockets are configured with `TCP_NODELAY` enabled (`setNoDelay(true)`) to disable Nagle's algorithm for sub-10ms clipboard synchronization.
 - TCP keep-alive probes are emitted every 15,000 ms with 3 unacknowledged probes before aborting dead wireless sessions.
+
+
+## IPv6 Dual-Stack & Link-Local Binding
+
+- Dual-stack listening on `::` with `ipv6Only: false` to allow IPv6 link-local peers (`fe80::/64`) when roaming across cellular and Wi-Fi networks.
+- Automatic filtering of transient Teredo and 6to4 tunneling pseudo-interfaces.
