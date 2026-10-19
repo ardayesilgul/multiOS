@@ -48,3 +48,9 @@ When multiple network adapters are active (e.g. Wi-Fi + Ethernet / Hyper-V virtu
 To prevent channel contention on crowded 2.4 GHz bands:
 - Discovery beacons transmit at randomized intervals between 1200 ms and 1800 ms (`±300ms` Poisson jitter).
 - Background sleep mode throttles discovery broadcasts to once every 10 seconds until an incoming connection is negotiated.
+
+
+## Socket Keep-Alive & TCP NoDelay
+
+- Sockets are configured with `TCP_NODELAY` enabled (`setNoDelay(true)`) to disable Nagle's algorithm for sub-10ms clipboard synchronization.
+- TCP keep-alive probes are emitted every 15,000 ms with 3 unacknowledged probes before aborting dead wireless sessions.
