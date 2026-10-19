@@ -66,3 +66,9 @@ To prevent channel contention on crowded 2.4 GHz bands:
 
 - TCP MSS is clamped to 1460 bytes for IPv4 and 1440 bytes for IPv6 to avoid fragmentation on VPN or PPPoE uplinks.
 - Chunk sizing respects network interface MTU to ensure low packet loss over congested 802.11 channels.
+
+
+## NAT Traversal & Subnet Boundaries
+
+- Direct socket communication is strictly scoped to local subnets (`RFC 1918` and `RFC 4193`).
+- STUN/TURN relays are explicitly disabled to guarantee data privacy and zero external dependency.
