@@ -60,3 +60,9 @@ To prevent channel contention on crowded 2.4 GHz bands:
 
 - Dual-stack listening on `::` with `ipv6Only: false` to allow IPv6 link-local peers (`fe80::/64`) when roaming across cellular and Wi-Fi networks.
 - Automatic filtering of transient Teredo and 6to4 tunneling pseudo-interfaces.
+
+
+## MTU Clamping & Path MTU Discovery
+
+- TCP MSS is clamped to 1460 bytes for IPv4 and 1440 bytes for IPv6 to avoid fragmentation on VPN or PPPoE uplinks.
+- Chunk sizing respects network interface MTU to ensure low packet loss over congested 802.11 channels.
