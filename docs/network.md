@@ -41,3 +41,10 @@ When multiple network adapters are active (e.g. Wi-Fi + Ethernet / Hyper-V virtu
 1. **Enumeration:** multiOS queries `os.networkInterfaces()` filtering out non-IPv4, loopback, and APIPA (`169.254.x.x`) addresses.
 2. **Preference:** Wireless adapters matching standard 802.11 SSID broadcasts take precedence for mobile device alignment.
 3. **Fallback:** If multi-subnet bridging is detected, the desktop UI provides an interface selector dropdown in the Diagnostics view.
+
+
+## Broadcast Beacon Timing & Jitter
+
+To prevent channel contention on crowded 2.4 GHz bands:
+- Discovery beacons transmit at randomized intervals between 1200 ms and 1800 ms (`±300ms` Poisson jitter).
+- Background sleep mode throttles discovery broadcasts to once every 10 seconds until an incoming connection is negotiated.
