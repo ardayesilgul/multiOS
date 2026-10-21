@@ -16,3 +16,10 @@ multiOS implements a strict defense-in-depth model for peer-to-peer data transfe
 3. **Clipboard Protection:**
    - OS-level clipboard updates require an active paired session and positive acknowledgment from the background helper process.
    - Paused clipboard state suspends listener hooks and purges volatile clipboard memory immediately.
+
+
+## Token Lifecycle & Cryptographic Salt
+
+- **Generation:** 32-byte cryptographic random sequence generated via `crypto.randomBytes(32).toString('hex')`.
+- **Validation:** Every HTTP and WebSocket request must present the bearer token in the `Authorization` header or query string `?token=`.
+- **Revocation:** Triggering "Renew Pairing" instantly clears active session tokens in memory and disconnects all paired WebSocket peers with code `4401 Session Revoked`.
