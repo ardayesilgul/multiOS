@@ -42,3 +42,14 @@ Broadcast to the paired client whenever local desktop clipboard changes (if clip
 - **File Header:** Contains original filename, byte length, and MIME type.
 - **Chunk Size:** Bounded to 512 KB per buffer frame to prevent memory spikes in low-end hardware.
 - **Verification:** Completed file size must strictly match `Content-Length`. Any incomplete transfer is flushed from temporary storage upon connection abort.
+
+
+## 3. Disconnection & Reconnection Matrix
+
+When mobile Safari enters the background on iOS (app switch / lock screen):
+- The WebSocket connection is suspended by the operating system within 30 seconds.
+- Upon returning to Safari, the client automatically triggers an immediate WebSocket reconnect with exponential backoff:
+  - Attempt 1: Immediate (0 ms)
+  - Attempt 2: 500 ms
+  - Attempt 3: 1500 ms
+  - Attempt 4: 3000 ms (capped)
