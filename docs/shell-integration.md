@@ -18,3 +18,9 @@ Details on the native tray menu lifecycle, icon state indicators, and notificati
 
 - Listens for `WM_SETTINGCHANGE` / `ImmersiveColorSet` notifications to mirror Windows system light/dark theme switches instantly.
 - Context menus utilize acrylic blur effects matching native Windows 11 shell styling guidelines.
+
+
+## High-DPI Display Scaling & Per-Monitor V2
+
+- Explicit `SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)` call on runtime startup.
+- Dynamically recalculates tray hit-test bounding rectangles upon `WM_DPICHANGED` messages when moving across multiple mixed-DPI displays.
