@@ -12,3 +12,9 @@ Details on the native tray menu lifecycle, icon state indicators, and notificati
 
 - Legacy Windows 10 builds without WinRT notification registration fall back to `NIM_MODIFY` tray balloon popups.
 - Balloon notifications automatically self-dismiss after 4 seconds without blocking thread execution.
+
+
+## Dark Mode Theme Sync & Mica Material
+
+- Listens for `WM_SETTINGCHANGE` / `ImmersiveColorSet` notifications to mirror Windows system light/dark theme switches instantly.
+- Context menus utilize acrylic blur effects matching native Windows 11 shell styling guidelines.
