@@ -13,9 +13,9 @@ const staged = path.join(testDir, 'staged');
 const base = 'http://127.0.0.1:15051';
 let server;
 async function start(dropOverride = true) {
-  const env = { ...process.env, MULTIOS_PORT: '15051', MULTIOS_DATA_DIR: path.join(testDir, 'data'), MULTIOS_DROP_DIR: drop, MULTIOS_STAGED_DIR: staged, MULTIOS_DISABLE_CLIPBOARD: '1', MULTIOS_DISABLE_MDNS: '1' };
+  const env = { ...process.env, MULTIOS_PORT: '15051', MULTIOS_DATA_DIR: path.join(testDir, 'data'), MULTIOS_DROP_DIR: drop, MULTIOS_STAGED_DIR: staged,  MULTIOS_DISABLE_MDNS: '1' };
   if (!dropOverride) delete env.MULTIOS_DROP_DIR;
-  server = spawn(process.execPath, ['src/server.js', '--silent'], {
+  server = spawn(process.execPath, ['tests/fixtures/server.js', 'src/server.js', '--silent'], {
     cwd: root, windowsHide: true, stdio: 'ignore',
     env,
   });
@@ -47,7 +47,7 @@ async function foreign(url, method = 'GET', body = '') {
   fs.writeFileSync(path.join(staged, legacyId + '_legacy-outbound.png'), fs.readFileSync(path.join(root, 'assets', 'multios.png')));
   await start();
   const status = await request('/api/status');
-  const token = new URL(status.pairUrl).searchParams.get('t');
+  let token = new URL(status.pairUrl).searchParams.get('t');
   const png = fs.readFileSync(path.join(root, 'assets', 'multios.png'));
   await test('existing received files are recovered without a history index', async () => { assert.ok(status.transfers.some(t => t.files.some(f => f.name === 'legacy-photo.png'))); });
   await test('old UUID-prefixed outbound files are recovered without a queue index', async () => { assert.ok(status.outbound.some(f => f.id === legacyId && f.name === 'legacy-outbound.png')); });
@@ -166,6 +166,100 @@ async function foreign(url, method = 'GET', body = '') {
     assert.ok(!(await request('/api/status')).transfers.some(t => t.files.some(f => f.name === 'unrelated.txt')));
     await request('/api/upload?name=after-restart.txt', { method: 'POST', body: 'persistent' });
     assert.equal(fs.readFileSync(path.join(chosen, 'after-restart.txt'), 'utf8'), 'persistent');
+  });
+  const postText = text => fetch(base + '/api/clipboard?t=' + token, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }),
+  });
+  const pause = paused => request('/api/clipboard/settings', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paused }),
+  });
+  await test('clipboard success waits for the matching helper acknowledgement', async () => {
+    const started = Date.now();
+    assert.equal((await postText('acknowledged text')).status, 200);
+    assert.ok(Date.now() - started >= 130);
+    assert.equal((await request('/api/clipboard?t=' + token)).item.text, 'acknowledged text');
+    assert.equal((await postText('test:helper-error')).status, 503);
+    assert.equal((await request('/api/clipboard?t=' + token)).item.text, 'acknowledged text');
+    const responses = await Promise.all([postText('first queued write'), postText('second queued write')]);
+    assert.ok(responses.every(r => r.status === 200));
+    assert.equal((await request('/api/clipboard?t=' + token)).item.text, 'second queued write');
+  });
+  await test('helper exit and timeout never report successful writes and recover', async () => {
+    assert.equal((await postText('test:helper-exit')).status, 503);
+    assert.equal((await postText('helper is unavailable')).status, 503);
+    await delay(2300);
+    assert.equal((await postText('after helper restart')).status, 200);
+    assert.equal((await postText('test:helper-timeout')).status, 503);
+    assert.equal((await request('/api/clipboard?t=' + token)).item.text, 'after helper restart');
+    await delay(2300);
+    assert.equal((await postText('after timeout restart')).status, 200);
+  });
+  await test('clipboard pause clears shared data, blocks writes, and preserves file transfer', async () => {
+    const writing = postText('cancelled by pause');
+    await delay(40);
+    await pause(true);
+    assert.equal((await writing).status, 423);
+    assert.equal((await postText('blocked')).status, 423);
+    const shared = await request('/api/clipboard?t=' + token);
+    assert.equal(shared.item, null); assert.equal(shared.paused, true);
+    assert.equal((await foreign('/api/clipboard/settings', 'POST')).status, 404);
+    const file = await request('/api/upload?name=while-paused.txt&t=' + token, { method: 'POST', body: 'files still work' });
+    assert.equal(file.count, 1);
+    await stop(); await start(false);
+    assert.equal((await request('/api/status')).clipboardStatus.paused, true);
+    assert.equal((await request('/api/clipboard?t=' + token)).item, null);
+    await pause(false);
+    assert.equal((await postText('sharing resumed')).status, 200);
+  });
+  await test('connection diagnostics are desktop-only and distinguish phone activity', async () => {
+    assert.equal((await foreign('/api/connection')).status, 404);
+    assert.equal((await fetch(base + '/pair?t=' + token)).status, 200);
+    const info = await request('/api/connection');
+    assert.equal(info.port, 15051); assert.equal(info.category, 'Private');
+    assert.ok(info.lastPhoneSeen); assert.equal(typeof info.hasNetwork, 'boolean');
+    const networkFile = path.join(testDir, 'data', 'test-network.json');
+    try {
+      fs.writeFileSync(networkFile, JSON.stringify({ lan: { name: 'loopback', address: '127.0.0.1' }, profile: { category: null, firewall: null } }));
+      const offline = await request('/api/connection');
+      assert.equal(offline.hasNetwork, false); assert.equal(offline.category, null);
+      fs.writeFileSync(networkFile, JSON.stringify({ lan: { name: 'Guest Wi-Fi', address: '10.0.1.10' }, profile: { category: 'Public', firewall: true } }));
+      const changed = await request('/api/connection');
+      assert.equal(changed.hasNetwork, true); assert.equal(changed.addressChanged, true); assert.equal(changed.category, 'Public');
+    } finally { fs.unlinkSync(networkFile); }
+
+  });
+  await test('renewing pairing rejects active writes and invalidates old tokens across restart', async () => {
+    assert.equal((await foreign('/api/pair/renew', 'POST')).status, 404);
+    const writing = postText('in-flight write');
+    await delay(35);
+    assert.equal((await fetch(base + '/api/pair/renew', { method: 'POST' })).status, 409);
+    assert.equal((await writing).status, 200);
+    let finishUpload;
+    const received = new Promise((resolve, reject) => {
+      const upload = http.request(base + '/api/upload?name=renew-guard.txt&t=' + token, {
+        method: 'POST', headers: { 'Content-Type': 'application/octet-stream' },
+      }, response => { response.resume(); response.on('end', () => resolve(response.statusCode)); });
+      upload.on('error', reject); upload.write('first half'); finishUpload = () => upload.end('second half');
+    });
+    try {
+      for (let i = 0; i < 20; i++) {
+        if ((await request('/api/status')).transfers.some(t => t.state === 'active')) break;
+        await delay(25);
+      }
+      assert.equal((await fetch(base + '/api/pair/renew', { method: 'POST' })).status, 409);
+    } finally { finishUpload(); }
+    assert.equal(await received, 200);
+    const old = token;
+    await request('/api/pair/renew' , { method: 'POST' });
+    const changed = await request('/api/status');
+    token = new URL(changed.pairUrl).searchParams.get('t');
+    assert.notEqual(token, old); assert.equal(changed.connection.lastPhoneSeen, null);
+    for (const route of ['/pair', '/api/clipboard', '/api/events', '/api/outbound'])
+      assert.equal((await foreign(route + '?t=' + old)).status, 401, route);
+    assert.equal((await foreign('/api/upload?t=' + old, 'POST', 'no')).status, 401);
+    await stop(); await start(false);
+    assert.equal(new URL((await request('/api/status')).pairUrl).searchParams.get('t'), token);
+    assert.equal((await postText('new paired connection')).status, 200);
   });
   console.log('All checks passed. Test data: ' + testDir);
 })().catch(e => { console.error(e); process.exitCode = 1; }).finally(stop);

@@ -159,8 +159,31 @@ namespace MultiOS
                         SelectPage("Clipboard");
                         if (Control<ScrollViewer>("ClipboardPage").Visibility != Visibility.Visible || Control<TextBox>("ClipboardText").Text != "pano-kontrol" || Control<Button>("CopyClipboard").Visibility != Visibility.Visible)
                             throw new Exception("Clipboard page did not show the received text");
+                        await Post("/api/clipboard/settings", new { paused = true });
+                        await Poll();
+                        if (Control<CheckBox>("PauseClipboard").IsChecked != true || Control<Button>("ResumeClipboard").Visibility != Visibility.Visible || Control<TextBox>("ClipboardText").Visibility != Visibility.Collapsed)
+                            throw new Exception("Paused clipboard is still exposed");
+                        SelectPage("Settings"); Capture(window, qaCapture + ".paused.png");
+                        Control<Button>("ResumeClipboard").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                        for (int i = 0; i < 40 && Control<CheckBox>("PauseClipboard").IsChecked == true; i++) await Task.Delay(100);
+                        if (Control<CheckBox>("PauseClipboard").IsChecked == true) throw new Exception("Clipboard did not resume");
+                        SelectPage("Device"); await CheckConnection(); await Task.Delay(240);
+                        if (!Control<TextBlock>("ConnectionSummary").Text.Contains(":")) throw new Exception("Connection diagnostics missing");
+                        Capture(window, qaCapture + ".connection.png");
+                        string oldPair = pairUrl;
+                        Control<Button>("RenewPairing").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                        if (Control<Border>("RenewPairingPanel").Visibility != Visibility.Visible) throw new Exception("Renewal confirmation missing");
+                        await Task.Delay(240); Capture(window, qaCapture + ".renew.png");
+                        Control<Button>("CancelRenewPairing").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                        if (Control<Border>("RenewPairingPanel").Visibility != Visibility.Collapsed) throw new Exception("Renewal cancel failed");
+                        Control<Button>("RenewPairing").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                        Control<Button>("ConfirmRenewPairing").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                        for (int i = 0; i < 40 && pairUrl == oldPair; i++) await Task.Delay(100);
+                        if (pairUrl == oldPair) throw new Exception("Pairing URL did not change");
+                        var revoked = await api.GetAsync("/api/clipboard" + new Uri(oldPair).Query);
+                        if (revoked.StatusCode != System.Net.HttpStatusCode.Unauthorized) throw new Exception("Old phone token is still authorized");
                         SelectPage("Settings");
-                        File.WriteAllText(qaCapture + ".checks.txt", "PASS title text and buttons hit testing; empty-list actions disabled; close hides window; hidden-window upload; received actions stay inline; navigation; native file staging; staged action enabled; clipboard page shows received text");
+                        File.WriteAllText(qaCapture + ".checks.txt", "PASS title text and buttons hit testing; empty-list actions disabled; close hides window; hidden-window upload; received actions stay inline; navigation; native file staging; staged action enabled; clipboard page shows received text; pause clears shared content; resume action; connection diagnostics; renewal confirm/cancel and old-token revocation");
                     }
                     Capture(window, qaCapture);
                     if (args.Contains("--verify")) tray.ContextMenuStrip.Items.OfType<Forms.ToolStripMenuItem>().Single(item => item.Text == "Çıkış").PerformClick();
@@ -253,6 +276,30 @@ namespace MultiOS
             Control<Button>("CopyClipboardImage").Click += (s, e) => {
                 try { var image = Control<Image>("ClipboardImage").Source as BitmapSource; if (image != null) { Clipboard.SetImage(image); Feedback("Görsel kopyalandı"); } } catch { Feedback("Pano şu an kullanılamıyor"); }
             };
+            Control<CheckBox>("PauseClipboard").Click += async (s, e) => {
+                if (loadingSettings) return;
+                var button = Control<CheckBox>("PauseClipboard"); button.IsEnabled = false;
+                try { await Post("/api/clipboard/settings", new { paused = button.IsChecked == true }); await Poll(); }
+                finally { button.IsEnabled = true; }
+            };
+            Control<Button>("ResumeClipboard").Click += async (s, e) => { await Post("/api/clipboard/settings", new { paused = false }); await Poll(); };
+            Control<Button>("CheckConnection").Click += async (s, e) => await CheckConnection();
+            Control<Button>("OpenNetworkSettings").Click += (s, e) => {
+                try { Process.Start(new ProcessStartInfo("ms-settings:network-status") { UseShellExecute = true }); }
+                catch (Exception error) { Feedback("Ağ ayarları açılamadı: " + error.Message); }
+            };
+            Control<Button>("RenewPairing").Click += (s, e) => { var panel = Control<Border>("RenewPairingPanel"); panel.Visibility = Visibility.Visible; window.UpdateLayout(); panel.BringIntoView(); };
+            Control<Button>("CancelRenewPairing").Click += (s, e) => Control<Border>("RenewPairingPanel").Visibility = Visibility.Collapsed;
+            Control<Button>("ConfirmRenewPairing").Click += async (s, e) => {
+                var button = Control<Button>("ConfirmRenewPairing"); button.IsEnabled = false;
+                try {
+                    if (await Post("/api/pair/renew", new { }) != null) {
+                        Control<Border>("RenewPairingPanel").Visibility = Visibility.Collapsed;
+                        Control<Border>("ConnectionPanel").Visibility = Visibility.Collapsed;
+                        await Poll(); Feedback("Erişim yenilendi. Telefonunla yeni QR kodunu okut.");
+                    }
+                } finally { button.IsEnabled = true; }
+            };
             Control<CheckBox>("DarkTheme").Click += (s, e) => {
                 if (loadingSettings) return;
                 ApplyTheme(Control<CheckBox>("DarkTheme").IsChecked == true);
@@ -269,6 +316,33 @@ namespace MultiOS
             };
             foreach (Button button in new[] { Control<Button>("CloseButton"), Control<Button>("MinimizeButton") })
                 AutomationProperties.SetName(button, Convert.ToString(button.ToolTip));
+        }
+
+        async Task CheckConnection()
+        {
+            var button = Control<Button>("CheckConnection"); button.IsEnabled = false;
+            Control<Border>("ConnectionPanel").Visibility = Visibility.Visible;
+            Control<TextBlock>("ConnectionSummary").Text = "Bağlantı kontrol ediliyor…";
+            Control<TextBlock>("ConnectionHint").Text = "";
+            try {
+                using (var timeout = new CancellationTokenSource(12000)) {
+                    var response = await uploads.GetAsync("/api/connection", timeout.Token);
+                    response.EnsureSuccessStatusCode();
+                    var info = json.Deserialize<Dictionary<string, object>>(await response.Content.ReadAsStringAsync());
+                    string category = Str(info, "category");
+                    string profile = category == "Public" ? "Genel ağ" : category == "Private" ? "Özel ağ" : category == "DomainAuthenticated" ? "Etki alanı ağı" : "Ağ profili okunamadı";
+                    DateTime seen;
+                    string phone = DateTime.TryParse(Str(info, "lastPhoneSeen"), out seen) ? "Son telefon bağlantısı: " + seen.ToLocalTime().ToString("dd.MM HH:mm") : "Bu oturumda telefon henüz bağlanmadı.";
+                    Control<TextBlock>("ConnectionSummary").Text = profile + " · " + Str(info, "iface") + "\n" + Str(info, "address") + ":" + Str(info, "port") + "\n" + phone;
+                    string hint = !GetBool(info, "hasNetwork") ? "Kullanılabilir bir yerel ağ bulunamadı. Wi-Fi veya Ethernet bağlantısını kontrol edin." :
+                        category == "Public" ? "Windows bu ağı Genel olarak görüyor. Yalnızca güvendiğiniz ev/ofis ağında Özel profil kullanın; güvenlik duvarında multiOS iznini kontrol edin." :
+                        "Telefon ve bilgisayar aynı ağda olmalı. Telefon bağlanmıyorsa Windows Güvenlik Duvarı izinlerini kontrol edin; misafir ağları cihazları birbirinden ayırabilir.";
+                    if (GetBool(info, "addressChanged")) hint += " Bilgisayarın adresi değişti. IP kullanan kestirmeyi yeni adresle güncelleyin.";
+                    if (Str(info, "firewall").Equals("False", StringComparison.OrdinalIgnoreCase)) hint += " Windows güvenlik duvarı bu profilde kapalı görünüyor.";
+                    Control<TextBlock>("ConnectionHint").Text = hint;
+                }
+            } catch { Control<TextBlock>("ConnectionSummary").Text = "Bağlantı bilgileri alınamadı. Yeniden deneyin."; }
+            finally { button.IsEnabled = true; window.UpdateLayout(); Control<Border>("ConnectionPanel").BringIntoView(); }
         }
 
         void SetupTray()
@@ -373,6 +447,11 @@ namespace MultiOS
                     Control<TextBlock>("PairAddress").Text = "http://" + Str(status, "ip") + ":" + Str(status, "port");
                     try { Control<Image>("QrImage").Source = Bitmap(await api.GetByteArrayAsync("/api/pair/qr")); } catch { }
                 }
+                var clipStatus = status.ContainsKey("clipboardStatus") ? status["clipboardStatus"] as Dictionary<string, object> : null;
+                bool paused = GetBool(clipStatus, "paused");
+                Control<CheckBox>("PauseClipboard").IsChecked = paused;
+                Control<Button>("ResumeClipboard").Visibility = paused ? Visibility.Visible : Visibility.Collapsed;
+                Control<TextBlock>("ClipboardSharingState").Text = paused ? "Pano paylaşımı duraklatıldı. Dosya aktarımı devam ediyor." : GetBool(clipStatus, "available") ? "Pano paylaşımı açık." : "Windows panosuna bağlanılıyor. Gönderim yapılamazsa telefon hata gösterecek.";
                 object clip;
                 var clipboard = status.TryGetValue("clipboard", out clip) ? clip as Dictionary<string, object> : null;
                 string clipType = Str(clipboard, "type");

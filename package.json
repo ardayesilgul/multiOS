@@ -1,6 +1,6 @@
 {
   "name": "multios",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Native Windows app for local iPhone file sharing",
   "main": "src/server.js",
@@ -12,7 +12,8 @@
     "build:dist": "powershell -ExecutionPolicy Bypass -File scripts/build-dist.ps1",
     "install:shortcut": "powershell -ExecutionPolicy Bypass -File scripts/install-shortcut.ps1",
     "test": "node tests/api.js",
-    "test:ui": "node tests/phone-ui.js"
+    "test:ui": "node tests/phone-ui.js",
+    "test:native": "node tests/native.js"
   },
   "engines": {
     "node": ">=22"

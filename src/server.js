@@ -9,8 +9,8 @@ const busboy = require('busboy');
 const QRCode = require('qrcode');
 
 const cfg = require('./config');
-const { loadState, tokenMatches } = require('./state');
-const { getLanAddress } = require('./network');
+const { loadState, renewPairing, tokenMatches } = require('./state');
+const { getLanAddress, getNetworkProfile } = require('./network');
 const { startMdns } = require('./mdns');
 const storage = require('./storage');
 const transfers = require('./transfers');
@@ -21,6 +21,27 @@ const media = require('./media');
 const SILENT = process.argv.includes('--silent');
 const state = loadState();
 let shutdownServer = () => {};
+let lastPhoneSeen = null;
+let activeClipboardRequests = 0;
+const networkPath = path.join(cfg.DATA_DIR, 'last-network.json');
+let previousAddress = null;
+try { previousAddress = JSON.parse(fs.readFileSync(networkPath, 'utf8')).address; } catch {}
+let addressChanged = false;
+let networkProfile = null;
+let profileAddress = '';
+let profileTime = 0;
+let profileRequest = null;
+function connectionInfo() {
+  const lan = getLanAddress();
+  if (previousAddress !== lan.address) {
+    addressChanged = !!previousAddress;
+    try { fs.writeFileSync(networkPath, JSON.stringify({ address: lan.address })); } catch {}
+    previousAddress = lan.address;
+  }
+  return { address: lan.address, iface: lan.name, port: cfg.PORT,
+    hasNetwork: lan.address !== '127.0.0.1' && !lan.address.startsWith('169.254.'),
+    addressChanged, lastPhoneSeen };
+}
 
 function log(msg) {
   const t = new Date().toTimeString().slice(0, 8);
@@ -40,6 +61,7 @@ function broadcastSse(event, data) {
   }
 }
 
+clipboard.events.on('status', value => broadcastSse('clipboard-status', value));
 clipboard.events.on('change', (item) => {
   broadcastSse('clipboard', item);
 });
@@ -328,6 +350,8 @@ async function handleStatus(res) {
     defaultDropDir: cfg.DEFAULT_DROP_DIR,
     qrSvg,
     clipboard: clipboard.getLatest(),
+    clipboardStatus: clipboard.getStatus(),
+    connection: connectionInfo(),
     transfers: transfers.list(),
     outbound: outbound.list(),
   });
@@ -388,7 +412,7 @@ function handleOutboundStage(req, res, query) {
     broadcastSse('toast', `${item.name} iPhone için hazırlandı`);
     sendJson(res, 200, { ok: true, count: 1, files: [item] });
   }).catch((e) => {
-    sendJson(res, 500, { ok: false, error: e.message });
+    sendJson(res, e.status || 500, { ok: false, error: e.message });
   });
 }
 
@@ -425,6 +449,8 @@ const server = http.createServer(async (req, res) => {
       fs.createReadStream(path.join(cfg.PUBLIC_DIR, 'apple-tokens.css')).pipe(res);
       return;
     }
+    if ((p === '/pair' || p.startsWith('/api/')) && tokenMatches(state.token, url.searchParams.get('t')))
+      lastPhoneSeen = new Date().toISOString();
     // --- Static brand icons
     if (p === '/apple-touch-icon.png' || p === '/apple-touch-icon-precomposed.png' || p === '/assets/multios.png') {
       const iconPath = path.join(cfg.PROJECT_ROOT || path.join(__dirname, '..'), 'assets', 'multios.png');
@@ -471,12 +497,15 @@ const server = http.createServer(async (req, res) => {
 
     if (p === '/api/clipboard' && req.method === 'GET') {
       if (!tokenMatches(state.token, url.searchParams.get('t'))) return sendJson(res, 401, { ok: false });
-      return sendJson(res, 200, { ok: true, item: clipboard.getLatest() });
+      return sendJson(res, 200, { ok: true, item: clipboard.getLatest(), ...clipboard.getStatus() });
     }
 
     if (p === '/api/clipboard' && req.method === 'POST') {
       const tokenOk = tokenMatches(state.token, url.searchParams.get('t'));
       if (!tokenOk) return sendJson(res, 401, { ok: false });
+      if (clipboard.getStatus().paused) return sendJson(res, 423, { ok: false, error: 'Pano paylaşımı bilgisayarda duraklatıldı.' });
+      activeClipboardRequests++;
+      res.once('close', () => { activeClipboardRequests--; });
       const contentType = String(req.headers['content-type'] || '');
 
       if (/^multipart\/form-data/i.test(contentType)) {
@@ -522,11 +551,12 @@ const server = http.createServer(async (req, res) => {
             const files = await Promise.all(pending);
             if (finished) return;
             if (files.length !== 1) return fail(400, 'Görsel alınamadı');
-            clipboard.setImage(files[0].path);
+            if (!tokenMatches(state.token, url.searchParams.get('t'))) return fail(401, 'Eşleşme yenilendi. QR kodunu yeniden okutun.');
+            await clipboard.setImage(files[0].path);
             finished = true;
             broadcastSse('toast', "iPhone'dan panoya görsel kopyalandı");
             sendJson(res, 200, { ok: true, type: 'image' });
-          } catch { fail(400, 'Görsel kaydedilemedi'); }
+          } catch (error) { fail(error.status || 400, error.status ? error.message : 'Görsel kaydedilemedi'); }
         });
         req.pipe(bb);
         return;
@@ -548,8 +578,10 @@ const server = http.createServer(async (req, res) => {
           req.on('end', () => resolve(buf));
         });
       }
+      if (typeof text !== 'string' || !text.trim()) return sendJson(res, 400, { ok: false, error: 'Bir metin yazın.' });
       if (text) {
-        clipboard.setText(text);
+        if (!tokenMatches(state.token, url.searchParams.get('t'))) return sendJson(res, 401, { ok: false, error: 'Eşleşme yenilendi. QR kodunu yeniden okutun.' });
+        await clipboard.setText(text);
         broadcastSse('toast', "iPhone'dan pano güncellendi");
         log(`Pano güncellendi <- ${clientLabel(req)}`);
       }
@@ -666,6 +698,35 @@ const server = http.createServer(async (req, res) => {
 
     if (p === '/api/status' && req.method === 'GET') return handleStatus(res);
 
+    if (p === '/api/connection' && req.method === 'GET') {
+      const info = connectionInfo();
+      if (!networkProfile || profileAddress !== info.iface || Date.now() - profileTime > 30000) {
+        if (!profileRequest) {
+          profileRequest = getNetworkProfile(info.iface).then(value => {
+            networkProfile = value; profileAddress = info.iface; profileTime = Date.now();
+          }).finally(() => { profileRequest = null; });
+        }
+        await profileRequest;
+      }
+      return sendJson(res, 200, { ok: true, ...connectionInfo(), ...networkProfile });
+    }
+    if (p === '/api/clipboard/settings' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      if (typeof body.paused !== 'boolean') return sendJson(res, 400, { ok: false, error: 'Geçersiz pano ayarı' });
+      clipboard.setPaused(body.paused);
+      return sendJson(res, 200, { ok: true, ...clipboard.getStatus() });
+    }
+    if (p === '/api/pair/renew' && req.method === 'POST') {
+      if (activeClipboardRequests || clipboard.getStatus().busy || transfers.list().some(t => t.state === 'active'))
+        return sendJson(res, 409, { ok: false, error: 'Aktarımın tamamlanmasını bekleyin.' });
+      renewPairing(state);
+      lastPhoneSeen = null;
+      broadcastSse('pairing-reset', {});
+      for (const client of sseClients) client.end();
+      sseClients.clear();
+      return sendJson(res, 200, { ok: true });
+    }
+
     if (p === '/api/shutdown' && req.method === 'POST') {
       sendJson(res, 200, { ok: true });
       setImmediate(shutdownServer);
@@ -681,7 +742,7 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/clipboard/set' && req.method === 'POST') {
       const body = await readJsonBody(req);
       if (typeof body.text === 'string' && body.text) {
-        clipboard.setText(body.text);
+        await clipboard.setText(body.text);
         return sendJson(res, 200, { ok: true });
       }
       return sendJson(res, 400, { ok: false });
@@ -783,7 +844,7 @@ const server = http.createServer(async (req, res) => {
     return sendText(res, 404, 'Not found');
   } catch (err) {
     log(`Istek hatasi ${p}: ${err.message}`);
-    if (!res.headersSent) sendJson(res, 500, { ok: false, error: 'Sunucu hatasi' });
+    if (!res.headersSent) sendJson(res, err.status || 500, { ok: false, error: err.status ? err.message : 'Sunucu hatası' });
     return undefined;
   }
 });

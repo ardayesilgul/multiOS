@@ -18,3 +18,23 @@
 - Pano yardımcısı çalışırken Windows panosunu izler. Güncel pano içeriğine
   eşleşmiş cihazlar erişebilir. Durdurmak için tepsiden **Çıkış**'ı seçin.
   Telefondan panoya her istekte en fazla 50 MB boyutunda tek bir görsel gönderilebilir.
+
+## Pano paylaşımını duraklatma
+
+Ayarlar'daki **Pano paylaşımını duraklat** seçeneği, panonun okunmasını ve telefondan
+yazılmasını durdurur. Paylaşılan önizleme kaldırılır; Windows panosundaki içerik ve
+dosya aktarımı korunur. Bu tercih yeniden başlatmada hatırlanır.
+
+## Eşleşmeyi yenileme
+
+**iPhone → Eşleşmeyi yenile**, mevcut telefon bağlantılarının tümünü iptal eder.
+Yeni QR kodunu okutmak ve kestirmedeki kişisel adresi değiştirmek gerekir.
+Normal yeniden başlatma veya güncelleme bu işlemi gerektirmez. Devam eden dosya
+veya pano aktarımı varken yenileme yapılmaz; alınmış dosyalar korunur.
+
+## Bağlantı kontrolü
+
+**iPhone → Bağlantıyı kontrol et**, ağ adresini, Windows ağ profilini ve son telefon
+bağlantısını gösterir. Bilgisayarın IP adresi değişmişse kestirmeyi güncelleme
+uyarısı verir. Güvenlik duvarının etkin olması, telefonun uygulamaya erişebildiğini
+tek başına kanıtlamaz. Uygulama ağ profilini veya izinleri otomatik değiştirmez.

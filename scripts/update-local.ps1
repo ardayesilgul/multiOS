@@ -3,6 +3,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $installRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'multiOS'
 $installedApp = Join-Path $installRoot 'app'
 $newPackage = Join-Path $root 'dist\multiOS.exe'
+$expectedVersion = (Get-Content -LiteralPath (Join-Path $root 'package.json') -Raw | ConvertFrom-Json).version
 if (!(Test-Path -LiteralPath $newPackage)) { throw 'Once build:dist calistirin.' }
 if ((Test-Path -LiteralPath $installRoot) -and ((Get-Item -LiteralPath $installRoot).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Kurulum yolu yonlendirme iceriyor.' }
 $active = $null
@@ -27,7 +28,7 @@ for ($i = 0; $i -lt 40; $i++) {
     Start-Sleep -Milliseconds 250
     try {
         $status = Invoke-RestMethod -Uri 'http://127.0.0.1:5050/api/status' -TimeoutSec 2
-        if ($status.version -eq '0.2.0') { $ready = $true; break }
+        if ($status.version -eq $expectedVersion) { $ready = $true; break }
     } catch {}
 }
 if (!$ready) { throw "Yeni surum baslatilamadi. Geri donus kopyasi: $backup" }

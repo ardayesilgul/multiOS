@@ -19,12 +19,22 @@ $env:MULTIOS_BROWSER_CHANNEL = 'msedge'
 npm run test:ui
 ```
 
-Yerel uygulamanın `--capture <tam-png-yolu> --verify` modu; başlık yazısına
-tıklamayı, pencereyi kapatıp tepsiye gizlemeyi, pencere gizliyken dosya almayı,
-gezinmeyi, gönderilecek dosya hazırlamayı ve pano gösterimini kontrol eder;
-ardından tepsideki çıkış işlemini çalıştırır. Bu modu ayrı `MULTIOS_PORT`,
-`MULTIOS_DATA_DIR`, `MULTIOS_DROP_DIR` ve `MULTIOS_STAGED_DIR` değerleriyle,
-`MULTIOS_DISABLE_CLIPBOARD=1` ve `MULTIOS_DISABLE_MDNS=1` ayarlarını kullanarak çalıştırın.
+Masaüstü penceresini ayrı test profiliyle açmak için:
+
+```powershell
+npm run test:native
+```
+
+Bu test bir Windows masaüstü oturumu gerektirir. Açık/koyu görünümde en küçük
+pencereyi açar; tepsiye gizleme, gizliyken dosya alma, pano duraklatma/devam,
+bağlantı kontrolü ve eşleşme yenileme/vazgeçme işlemlerini sınar. Sonunda tepsiden
+çıkar ve test servisini durdurur. Paket içeriğini sınamak için açılmış uygulama
+klasörünü `node tests/native.js <uygulama-klasörü>` ile verebilirsiniz.
+
+Pano testleri `tests/fixtures/clipboard.js` sürecini kullanır; kişisel Windows
+panosuna dokunmaz. Yardımcıdan gecikmeli onay, hata, kapanma ve zaman aşımı
+senaryoları kontrol edilir. `--real-network` seçeneği ağ profilini Windows'tan okur;
+ağ ve güvenlik duvarı ayarlarını değiştirmez.
 
 Gerçek iPhone izinleri, kestirme kurulumu, Wi-Fi değişiklikleri, uyku/uyanma,
 HEIC kodekleri ve uzun videolar cihaz üzerinde ayrıca kontrol edilmelidir.
