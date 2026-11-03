@@ -10,7 +10,7 @@ Share photos, files and clipboard content between an iPhone and Windows over you
 local network. Windows uses a native WPF window and system tray. Files travel
 directly between devices; no cloud account is required.
 
-[**Download for Windows · v0.2.0**](https://github.com/ardayesilgul/multiOS/releases/latest/download/multiOS.exe)
+[**Download for Windows · v0.3.0**](https://github.com/ardayesilgul/multiOS/releases/latest/download/multiOS.exe)
 
 ## Screenshots
 
