@@ -27,6 +27,13 @@ function loadState() {
   return state;
 }
 
+function renewPairing(state) {
+  const next = { ...state, token: newToken(), createdAt: new Date().toISOString() };
+  fs.writeFileSync(STATE_FILE + '.tmp', JSON.stringify(next, null, 2));
+  fs.renameSync(STATE_FILE + '.tmp', STATE_FILE);
+  Object.assign(state, next);
+}
+
 function tokenMatches(expected, given) {
   if (typeof given !== 'string') return false;
   const a = Buffer.from(expected);
@@ -34,4 +41,4 @@ function tokenMatches(expected, given) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-module.exports = { loadState, tokenMatches, STATE_FILE };
+module.exports = { loadState, renewPairing, tokenMatches, STATE_FILE };

@@ -79,7 +79,7 @@ için uygulamaya izin verin.
 ## Dosyalar ve gizlilik
 
 - Gelen dosyalar `İndirilenler/multiOS` klasörüne kaydedilir. Ayarlar'dan başka bir klasör seçebilirsiniz.
-- Uygulama açıkken Windows panosu eşleşmiş telefondan erişilebilir.
+- Uygulama açıkken Windows panosu eşleşmiş telefondan erişilebilir. Ayarlar'dan pano paylaşımını duraklatabilirsiniz.
 - Aktarımlar yerel HTTP kullanır. Güvenilir bir özel ağ kullanın; servisi internete açmayın.
 - HEIC önizlemesi Windows kodeklerine bağlıdır; dosyayı almak için kodek gerekmez.
 

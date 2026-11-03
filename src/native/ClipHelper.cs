@@ -104,44 +104,30 @@ namespace MultiOS {
                 string line;
                 while ((line = Console.ReadLine()) != null) {
                     line = line.Trim();
-                    if (line.StartsWith("SET_TEXT ")) {
-                        string b64 = line.Substring(9);
+                    if (line.StartsWith("SET_TEXT ") || line.StartsWith("SET_IMAGE ")) {
+                        string[] parts = line.Split(new[] { ' ' }, 3);
+                        string id = parts.Length > 1 ? parts[1] : "";
                         try {
-                            byte[] data = Convert.FromBase64String(b64);
-                            string text = Encoding.UTF8.GetString(data);
-                            lastText = text;
-                            suppressNext = true;
+                            if (parts.Length != 3) throw new Exception("Invalid clipboard command");
+                            string value = Encoding.UTF8.GetString(Convert.FromBase64String(parts[2]));
                             listener.Invoke(new Action(() => {
                                 try {
-                                    Clipboard.SetDataObject(text, true);
-                                    SendJson("{\"type\":\"set_ok\",\"ts\":" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + "}");
+                                    if (parts[0] == "SET_TEXT") {
+                                        Clipboard.SetDataObject(value, true);
+                                        lastText = value;
+                                    } else {
+                                        using (Image image = Image.FromFile(value))
+                                            Clipboard.SetDataObject(new Bitmap(image), true);
+                                    }
+                                    suppressNext = true;
+                                    SendJson("{\"type\":\"set_ok\",\"id\":\"" + Escape(id) + "\"}");
                                 } catch (Exception ex) {
-                                    SendJson("{\"type\":\"set_err\",\"error\":\"" + Escape(ex.Message) + "\"}");
+                                    suppressNext = false;
+                                    SendJson("{\"type\":\"set_err\",\"id\":\"" + Escape(id) + "\",\"error\":\"" + Escape(ex.Message) + "\"}");
                                 }
                             }));
                         } catch (Exception ex) {
-                            SendJson("{\"type\":\"set_err\",\"error\":\"" + Escape(ex.Message) + "\"}");
-                        }
-                    } else if (line.StartsWith("SET_IMAGE ")) {
-                        string imgPath = line.Substring(10).Trim();
-                        try {
-                            if (File.Exists(imgPath)) {
-                                suppressNext = true;
-                                listener.Invoke(new Action(() => {
-                                    try {
-                                        using (Image img = Image.FromFile(imgPath)) {
-                                            Clipboard.SetDataObject(new Bitmap(img), true);
-                                            SendJson("{\"type\":\"set_ok\",\"ts\":" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + "}");
-                                        }
-                                    } catch (Exception ex) {
-                                        SendJson("{\"type\":\"set_err\",\"error\":\"" + Escape(ex.Message) + "\"}");
-                                    }
-                                }));
-                            } else {
-                                SendJson("{\"type\":\"set_err\",\"error\":\"Dosya bulunamadi\"}");
-                            }
-                        } catch (Exception ex) {
-                            SendJson("{\"type\":\"set_err\",\"error\":\"" + Escape(ex.Message) + "\"}");
+                            SendJson("{\"type\":\"set_err\",\"id\":\"" + Escape(id) + "\",\"error\":\"" + Escape(ex.Message) + "\"}");
                         }
                     } else if (line.StartsWith("GET")) {
                         try {

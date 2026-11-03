@@ -865,7 +865,7 @@
       if (!response.ok) throw new Error();
       await refresh();
     } catch { alert('Temizleme tamamlanamadı. Yeniden deneyin.'); }
-    finally { button.disabled = (button.id === 'clearClipboard' && !clipboardItem) || (button.id === 'clearOutbound' && !$('phoneOutboundFeed').children.length); }
+    finally { button.disabled = pairingRevoked || (button.id === 'clearClipboard' && !clipboardItem) || (button.id === 'clearOutbound' && !$('phoneOutboundFeed').children.length); }
   }
   $('clearReceived').onclick = () => clearRecord('/api/transfers/clear', $('clearReceived'), async () => {
     await fetchHistory();
@@ -885,10 +885,13 @@
   async function ping() {
     try {
       const r = await fetch('/api/ping?t=' + encodeURIComponent(TOKEN), { cache: 'no-store' });
+      if (pairingRevoked) return;
+      if (r.status === 401) { revokePairing(); return; }
       const ok = r.ok;
       $('conn').className = 'conn ' + (ok ? 'on' : 'off');
       $('connText').textContent = ok ? 'Gönderime hazır' : 'Eşleşme geçersiz';
     } catch {
+      if (pairingRevoked) return;
       $('conn').className = 'conn off';
       $('connText').textContent = 'Bilgisayara ulaşılamıyor';
     }
@@ -992,7 +995,7 @@
     function finish() {
       uploading = false;
       for (const id of ['pick', 'filePick']) $(id).classList.remove('busy');
-      for (const id of ['photos', 'file']) { $(id).disabled = false; $(id).value = ''; }
+      for (const id of ['photos', 'file']) { $(id).disabled = pairingRevoked; $(id).value = ''; }
       $('retryUpload').hidden = !retryFiles.length;
       holdScreen(false);
     }
@@ -1014,6 +1017,7 @@
   }
 
   function renderOutbound(files) {
+    if (pairingRevoked) return;
     const feed = $('phoneOutboundFeed');
     feed.replaceChildren();
     $('outboundEmpty').hidden = files.length > 0;
@@ -1035,23 +1039,50 @@
   }
 
   let clipboardItem = null;
+  let clipboardPaused = false;
+  let clipboardRevision = 0;
+  let pairingRevoked = false;
+  function applyClipboardStatus(value) {
+    if (pairingRevoked || (value.revision && value.revision < clipboardRevision)) return false;
+    clipboardRevision = value.revision || clipboardRevision;
+    const wasPaused = clipboardPaused;
+    clipboardPaused = !!value.paused;
+    if (clipboardPaused) {
+      applyClipboardItem(null);
+      clipboardFeedback('Pano paylaşımı bilgisayarda duraklatıldı. Dosya gönderip almaya devam edebilirsiniz.');
+    } else if (wasPaused) clipboardFeedback('Pano paylaşımı yeniden açık.');
+    updateClipboardControls();
+    return true;
+  }
+  function revokePairing() {
+    pairingRevoked = true;
+    applyClipboardItem(null);
+    $('conn').className = 'conn off';
+    $('connText').textContent = 'Eşleşme yenilendi. Bilgisayardaki QR kodunu yeniden okutun.';
+    $('phoneOutboundFeed').replaceChildren();
+    document.querySelectorAll('button,input,textarea').forEach(control => { control.disabled = true; });
+    document.querySelectorAll('.phone-outbound-dl').forEach(link => link.removeAttribute('href'));
+    $('pick').classList.add('busy'); $('filePick').classList.add('busy');
+    clipboardFeedback('Bu bağlantının erişimi kaldırıldı. Yeni QR koduyla bağlanın.', 'error');
+  }
   let clipboardSending = false;
   function clipboardFeedback(message, state = '') {
     $('clipFeedback').textContent = message;
     $('clipFeedback').dataset.state = state;
   }
   function updateClipboardControls() {
-    $('phoneSendBtn').disabled = clipboardSending || !$('phoneSendInput').value.trim();
-    $('phoneClipPhotoInput').disabled = clipboardSending;
-    $('clipPhotoPick').classList.toggle('busy', clipboardSending);
+    $('phoneSendBtn').disabled = clipboardPaused || pairingRevoked || clipboardSending || !$('phoneSendInput').value.trim();
+    $('phoneClipPhotoInput').disabled = clipboardPaused || pairingRevoked || clipboardSending;
+    $('clipPhotoPick').classList.toggle('busy', clipboardPaused || pairingRevoked || clipboardSending);
   }
   function applyClipboardItem(item) {
+    if (clipboardPaused || pairingRevoked) item = null;
     clipboardItem = item;
     const hasText = item && item.type === 'text' && typeof item.text === 'string' && item.text.length > 0;
     const hasImage = item && item.type === 'image';
     $('phoneClipCopy').hidden = !!hasImage;
-    $('phoneClipCopy').disabled = !hasText;
-    $('clearClipboard').disabled = !item;
+    $('phoneClipCopy').disabled = clipboardPaused || pairingRevoked || !hasText;
+    $('clearClipboard').disabled = clipboardPaused || pairingRevoked || !item;
     $('phoneClipThumb').style.display = hasImage ? 'block' : 'none';
     $('phoneClipDownload').style.display = hasImage ? 'inline-flex' : 'none';
     if (hasImage) {
@@ -1069,8 +1100,10 @@
   async function fetchClipboard() {
     try {
       const response = await fetch('/api/clipboard?t=' + encodeURIComponent(TOKEN), { cache: 'no-store' });
+      if (response.status === 401) { revokePairing(); return; }
       if (!response.ok) throw new Error();
-      applyClipboardItem((await response.json()).item);
+      const data = await response.json();
+      if (applyClipboardStatus(data)) applyClipboardItem(data.item);
     } catch { clipboardFeedback('Pano alınamadı. Bilgisayar bağlantısını kontrol edin.', 'error'); }
   }
   $('phoneClipCopy').addEventListener('click', async () => {
@@ -1080,7 +1113,7 @@
   });
   $('phoneSendInput').addEventListener('input', updateClipboardControls);
   async function sendClipboard(body, headers, successMessage) {
-    if (clipboardSending) return false;
+    if (clipboardPaused || pairingRevoked || clipboardSending) return false;
     clipboardSending = true; updateClipboardControls();
     clipboardFeedback('Windows panosuna gönderiliyor…');
     try {
@@ -1089,7 +1122,7 @@
       try { result = await response.json(); } catch {}
       if (!response.ok || !result || !result.ok) throw new Error(response.status === 401 ? 'Eşleşme geçersiz. QR kodunu yeniden okutun.' : result && result.error || 'Gönderilemedi. Yeniden deneyin.');
       await fetchClipboard();
-      clipboardFeedback(successMessage, 'success');
+      if (!clipboardPaused && !pairingRevoked) clipboardFeedback(successMessage, 'success');
       return true;
     } catch (error) {
       clipboardFeedback(error instanceof TypeError ? 'Bağlantı kesildi. Bilgisayarı kontrol edip yeniden deneyin.' : error.message, 'error');
@@ -1117,6 +1150,15 @@
   function connectSse() {
     try {
       const es = new EventSource('/api/events?t=' + encodeURIComponent(TOKEN));
+      es.addEventListener('error', async () => {
+        if (pairingRevoked) return;
+        try {
+          const response = await fetch('/api/clipboard?t=' + encodeURIComponent(TOKEN));
+          if (response.status === 401) { revokePairing(); es.close(); }
+        } catch {}
+      });
+      es.addEventListener('clipboard-status', e => applyClipboardStatus(JSON.parse(e.data)));
+      es.addEventListener('pairing-reset', () => { revokePairing(); es.close(); });
       es.addEventListener('clipboard', (e) => {
         applyClipboardItem(JSON.parse(e.data));
       });

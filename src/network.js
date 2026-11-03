@@ -1,6 +1,7 @@
 'use strict';
 
 const os = require('os');
+const { execFile } = require('child_process');
 
 const VIRTUAL = /vEthernet|VirtualBox|VMware|WSL|Hyper-V|Loopback|Bluetooth|Tailscale|ZeroTier|Npcap|TAP|VPN/i;
 const PREFERRED = /Wi-?Fi|Wireless|WLAN|Kablosuz|Ethernet/i;
@@ -27,4 +28,17 @@ function getLanAddress() {
   return candidates[0] || { name: 'loopback', address: '127.0.0.1', score: -100 };
 }
 
-module.exports = { getLanAddress };
+function getNetworkProfile(iface) {
+  return new Promise(resolve => {
+    if (process.platform !== 'win32') return resolve({ category: null, firewall: null });
+    const script = "$ErrorActionPreference='Stop'; $p=Get-NetConnectionProfile -InterfaceAlias $env:MULTIOS_NETWORK_IFACE | Select-Object -First 1; $name=if($p.NetworkCategory -eq 'DomainAuthenticated'){'Domain'}else{[string]$p.NetworkCategory}; $f=Get-NetFirewallProfile -PolicyStore ActiveStore -Name $name; @{ category=[string]$p.NetworkCategory; firewall=[bool]$f.Enabled } | ConvertTo-Json -Compress";
+    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
+      windowsHide: true, timeout: 8000, env: { ...process.env, MULTIOS_NETWORK_IFACE: iface },
+    }, (error, stdout) => {
+      if (!error) { try { return resolve(JSON.parse(stdout)); } catch {} }
+      resolve({ category: null, firewall: null });
+    });
+  });
+}
+
+module.exports = { getLanAddress, getNetworkProfile };

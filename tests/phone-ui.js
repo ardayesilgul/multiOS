@@ -12,10 +12,10 @@ const data = fs.mkdtempSync(path.join(os.tmpdir(), 'multios-ui-'));
 const results = path.join(root, 'test-results');
 fs.mkdirSync(results, { recursive: true });
 (async () => {
-  const server = spawn(process.execPath, ['src/server.js', '--silent'], {
+  const server = spawn(process.execPath, ['tests/fixtures/server.js', 'src/server.js', '--silent'], {
     cwd: root, windowsHide: true, stdio: 'ignore', env: { ...process.env,
       MULTIOS_PORT: '15050', MULTIOS_DATA_DIR: path.join(data, 'data'), MULTIOS_DROP_DIR: path.join(data, 'received'),
-      MULTIOS_STAGED_DIR: path.join(data, 'staged'), MULTIOS_DISABLE_CLIPBOARD: '1', MULTIOS_DISABLE_MDNS: '1' },
+      MULTIOS_STAGED_DIR: path.join(data, 'staged'),  MULTIOS_DISABLE_MDNS: '1' },
   });
   let browser;
   try {
@@ -140,6 +140,59 @@ fs.mkdirSync(results, { recursive: true });
         const [download] = await Promise.all([page.waitForEvent('download'),page.locator('.phone-outbound-dl').first().click()]);
         await download.saveAs(path.join(results,'downloaded.png'));
         console.log('PASS photo/file upload and retry; clipboard copy, multiline text, error recovery and image feedback');
+      }
+      if (width === 390 && theme === 'light') {
+        const setting = async paused => {
+          const response = await fetch('http://127.0.0.1:15050/api/clipboard/settings', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paused }),
+          });
+          assert.equal(response.status, 200);
+        };
+        let releaseSnapshot;
+        let snapshotCaptured;
+        const held = new Promise(resolve => { snapshotCaptured = resolve; });
+        const release = new Promise(resolve => { releaseSnapshot = resolve; });
+        const holdClipboard = async route => {
+          if (route.request().method() !== 'GET') return route.continue();
+          const response = await route.fetch();
+          snapshotCaptured(); await release; await route.fulfill({ response });
+        };
+        await page.route('**/api/clipboard?*', holdClipboard);
+        await page.locator('#phoneSendInput').fill('old snapshot must stay hidden');
+        await page.locator('#phoneSendBtn').click();
+        await held;
+        await setting(true);
+        await page.getByText('Pano paylaşımı bilgisayarda duraklatıldı. Dosya gönderip almaya devam edebilirsiniz.').waitFor();
+        releaseSnapshot();
+        await page.waitForFunction(() => document.getElementById('phoneSendInput').value === '');
+        await page.unroute('**/api/clipboard?*', holdClipboard);
+        assert.equal(await page.locator('#phoneSendBtn').isDisabled(), true);
+        assert.equal(await page.locator('#phoneClipPhotoInput').isDisabled(), true);
+        assert.ok(!(await page.locator('#phoneClipText').innerText()).includes('old snapshot'));
+        await setting(false);
+        await page.getByText('Pano paylaşımı yeniden açık.').waitFor();
+        console.log('PASS delayed clipboard snapshot cannot undo pause or reveal old content');
+        await page.locator('#phoneSendInput').fill('keep this draft');
+        await setting(true);
+        await page.getByText('Pano paylaşımı bilgisayarda duraklatıldı. Dosya gönderip almaya devam edebilirsiniz.').waitFor();
+        assert.equal(await page.locator('#phoneSendBtn').isDisabled(), true);
+        assert.equal(await page.locator('#phoneClipPhotoInput').isDisabled(), true);
+        assert.equal(await page.locator('#photos').isEnabled(), true);
+        assert.equal(await page.locator('#phoneSendInput').inputValue(), 'keep this draft');
+        await page.screenshot({ path: path.join(results, 'phone-clipboard-paused.png'), fullPage: true });
+        await setting(false);
+        await page.getByText('Pano paylaşımı yeniden açık.').waitFor();
+        assert.equal(await page.locator('#phoneSendBtn').isEnabled(), true);
+        assert.equal((await fetch('http://127.0.0.1:15050/api/clipboard/set', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: 'UI test clipboard' }) })).status, 200);
+        console.log('PASS clipboard pause/resume updates an open phone page and preserves the draft');
+      }
+      if (width === 768) {
+        assert.equal((await fetch('http://127.0.0.1:15050/api/pair/renew', { method: 'POST' })).status, 200);
+        await page.getByText('Eşleşme yenilendi. Bilgisayardaki QR kodunu yeniden okutun.').waitFor();
+        assert.equal(await page.locator('#photos').isDisabled(), true);
+        assert.equal(await page.locator('#phoneSendBtn').isDisabled(), true);
+        await page.screenshot({ path: path.join(results, 'phone-pairing-renewed.png'), fullPage: true });
+        console.log('PASS pairing renewal immediately revokes the open phone page');
       }
       await context.close();
     }

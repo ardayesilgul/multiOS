@@ -12,7 +12,7 @@ namespace MultiOS
     static class Launcher
     {
         private const string AppName = "multiOS";
-        private const string AppVersion = "0.2.0";
+        private const string AppVersion = "0.3.0";
 
         [STAThread]
         static void Main(string[] args)

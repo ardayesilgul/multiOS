@@ -78,7 +78,7 @@ PC's IP changes. Allow multiOS through Windows Firewall on private networks.
 ## Files and privacy
 
 - Received files go to `Downloads/multiOS`. Choose another folder in Settings.
-- While multiOS is running, paired phones can access the Windows clipboard.
+- While multiOS is running, paired phones can access the Windows clipboard. Pause sharing in Settings.
 - Transfers use local HTTP. Use a trusted private network and don't expose the service to the internet.
 - HEIC previews depend on Windows codecs; receiving the file doesn't.
 
