@@ -642,8 +642,11 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 404, { ok: false, error: 'Dosya bulunamadı' });
       }
       const encoded = encodeURIComponent(file.name);
+      const mimeType = file.mimeType && file.mimeType !== 'application/octet-stream'
+        ? file.mimeType
+        : storage.mimeFromName(file.name);
       res.writeHead(200, {
-        'Content-Type': file.mimeType || 'application/octet-stream',
+        'Content-Type': mimeType,
         'Content-Length': file.size,
         'Content-Disposition': `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`,
         'Cache-Control': 'no-store',

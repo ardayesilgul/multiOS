@@ -24,7 +24,7 @@ try {
     if (!entry.isFile() || !match || entry.name.endsWith('.part') || items.has(match[1])) continue;
     const filePath = path.join(cfg.STAGED_DIR, entry.name);
     const stat = fs.statSync(filePath);
-    items.set(match[1], { id: match[1], name: match[2], path: filePath, size: stat.size, mimeType: 'application/octet-stream', stagedAt: stat.mtimeMs });
+    items.set(match[1], { id: match[1], name: match[2], path: filePath, size: stat.size, mimeType: storage.mimeFromName(match[2]), stagedAt: stat.mtimeMs });
     recovered = true;
   }
   if (recovered) persist();
@@ -75,12 +75,15 @@ function stage({ name: rawName, stream, size = null, mimeType = '' }) {
         reject(new Error('Dosya eksik alindi'));
         return;
       }
+      const resolvedMime = mimeType && mimeType !== 'application/octet-stream'
+        ? mimeType
+        : storage.mimeFromName(name);
       const item = {
         id,
         name,
         path: filePath,
         size: realSize,
-        mimeType: mimeType || 'application/octet-stream',
+        mimeType: resolvedMime,
         stagedAt: Date.now(),
       };
       try {

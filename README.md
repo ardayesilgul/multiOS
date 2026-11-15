@@ -10,7 +10,7 @@ iPhone ve Windows arasında yerel ağ üzerinden fotoğraf, dosya ve pano içeri
 paylaşın. Windows uygulaması yerel bir WPF penceresi ve sistem tepsisiyle çalışır.
 Dosyalar doğrudan cihazlar arasında aktarılır; bulut hesabı gerekmez.
 
-[**Windows için indir · v0.3.0**](https://github.com/ardayesilgul/multiOS/releases/latest/download/multiOS.exe)
+[**Windows için indir · v0.3.1**](https://github.com/ardayesilgul/multiOS/releases/latest/download/multiOS.exe)
 
 ## Ekran görüntüleri
 
