@@ -261,5 +261,39 @@ async function foreign(url, method = 'GET', body = '') {
     assert.equal(new URL((await request('/api/status')).pairUrl).searchParams.get('t'), token);
     assert.equal((await postText('new paired connection')).status, 200);
   });
+  await test('everyday file types (.md, office, data, contact/calendar) resolve extensions and MIME types', async () => {
+    const mdUpload = await request('/api/upload?t=' + token, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/markdown' },
+      body: '# Merhaba\nNotlar\n',
+    });
+    assert.equal(mdUpload.count, 1);
+    assert.ok(mdUpload.files[0].name.endsWith('.md'), 'expected .md extension, got ' + mdUpload.files[0].name);
+
+    const cases = [
+      ['notlar.md', '# Baslik', 'text/markdown; charset=utf-8'],
+      ['tablo.csv', 'a,b\n1,2\n', 'text/csv; charset=utf-8'],
+      ['ayar.json', '{"ok":true}', 'application/json; charset=utf-8'],
+      ['rapor.docx', 'fake-docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+      ['kisi.vcf', 'BEGIN:VCARD\nEND:VCARD', 'text/vcard; charset=utf-8'],
+      ['etkinlik.ics', 'BEGIN:VCALENDAR\nEND:VCALENDAR', 'text/calendar; charset=utf-8'],
+      ['belge.pdf', '%PDF-1.4', 'application/pdf'],
+    ];
+    for (const [name, body, expectedMime] of cases) {
+      const staged = await request('/api/outbound/stage?name=' + encodeURIComponent(name), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body,
+      });
+      assert.equal(staged.count, 1);
+      const item = staged.files[0];
+      assert.equal(item.name, name);
+      assert.equal(item.mimeType, expectedMime);
+      const dl = await fetch(base + '/api/outbound/download/' + item.id + '?t=' + token);
+      assert.equal(dl.status, 200);
+      assert.equal(dl.headers.get('content-type'), expectedMime);
+      assert.equal(await dl.text(), body);
+    }
+  });
   console.log('All checks passed. Test data: ' + testDir);
 })().catch(e => { console.error(e); process.exitCode = 1; }).finally(stop);

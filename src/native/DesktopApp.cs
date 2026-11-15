@@ -209,7 +209,26 @@ namespace MultiOS
             return ((IEnumerable)value).Cast<object>().OfType<Dictionary<string, object>>();
         }
         static string Bytes(double bytes) { return bytes >= 1073741824 ? (bytes / 1073741824).ToString("0.0") + " GB" : bytes >= 1048576 ? (bytes / 1048576).ToString("0.0") + " MB" : bytes >= 1024 ? (bytes / 1024).ToString("0") + " KB" : bytes.ToString("0") + " B"; }
-        static string IconFor(string name) { return new[] { ".jpg", ".jpeg", ".png", ".heic", ".webp", ".gif" }.Contains(Path.GetExtension(name).ToLowerInvariant()) ? "\uEB9F" : "\uE8A5"; }
+        static string IconFor(string name)
+        {
+            switch (Path.GetExtension(name).ToLowerInvariant())
+            {
+                case ".jpg": case ".jpeg": case ".png": case ".heic": case ".heif":
+                case ".webp": case ".gif": case ".svg": case ".bmp": case ".tiff": case ".tif":
+                    return "\uEB9F";
+                case ".mp4": case ".mov": case ".webm":
+                    return "\uE714";
+                case ".mp3": case ".m4a": case ".wav": case ".aac": case ".ogg":
+                    return "\uE8D6";
+                case ".zip": case ".7z": case ".rar": case ".gz":
+                    return "\uF012";
+                case ".md": case ".markdown": case ".txt": case ".rtf": case ".json":
+                case ".csv": case ".xml": case ".html": case ".htm":
+                    return "\uE7C3";
+                default:
+                    return "\uE8A5";
+            }
+        }
 
         void WireWindow()
         {
