@@ -18,6 +18,7 @@ using System.Windows.Interop;
 using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Microsoft.Win32;
@@ -45,9 +46,9 @@ namespace MultiOS
         DispatcherTimer timer;
         DispatcherTimer feedbackTimer;
         Process service;
-        bool polling, staging, exiting, initialPoll = true, loadingSettings, dark, receiving, dropActive;
+        bool polling, staging, exiting, initialPoll = true, loadingSettings, dark, receiving, dropActive, pairedActive;
         DateTime lastStart = DateTime.MinValue;
-        string page = "Receive", receiveSignature = "", sendSignature = "", pairUrl = "", clipboardImagePath = "";
+        string page = "Send", receiveSignature = "", sendSignature = "", pairUrl = "", clipboardImagePath = "";
         string qaCapture;
         int failures;
 
@@ -97,7 +98,7 @@ namespace MultiOS
             WireWindow();
             SetupTray();
             ApplyTheme(GetBool(preferences, "dark"));
-            SelectPage("Receive");
+            SelectPage("Send");
             loadingSettings = true;
             Control<CheckBox>("DarkTheme").IsChecked = dark;
             Control<CheckBox>("AutoStart").IsChecked = IsAutoStart();
@@ -122,8 +123,8 @@ namespace MultiOS
                     if (args.Contains("--dark")) ApplyTheme(true);
                     await Task.Delay(1200);
                     if (args.Contains("--verify")) {
-                        if (window.WindowStyle != WindowStyle.SingleBorderWindow)
-                            throw new Exception("Native window style failed");
+                        if (window.WindowStyle != WindowStyle.SingleBorderWindow || Control<Grid>("SendPage").Visibility != Visibility.Visible)
+                            throw new Exception("Native window style or default Send page failed");
                         if (Control<Border>("Signature").OpacityMask == null) throw new Exception("Signature did not load");
                         if (Control<Button>("ClearReceived").IsEnabled || Control<Button>("ClearOutbound").IsEnabled)
                             throw new Exception("Empty lists allow clearing");
@@ -392,7 +393,7 @@ namespace MultiOS
                 Control<Button>("Nav" + p).Background = p == next ? Brush(dark ? "#38383A" : "#E4E4E9") : Brushes.Transparent;
                 Control<Button>("Nav" + p).FontWeight = p == next ? FontWeights.Medium : FontWeights.Normal;
             }
-            string[] titles = { "Gelen dosyalar", "Pano", "iPhone'a gönder", "iPhone", "Ayarlar" };
+            string[] titles = { "Gelen dosyalar", "Pano", "iPhone'a gönder", "Eşleştirme", "Ayarlar" };
             string[] subtitles = { "iPhone'dan gelen fotoğraf ve dosyalar.", "Kopyaladığın son metin veya görsel.", "Dosyaları seç veya aşağıya bırak; iPhone'undan indirebilirsin.", "iPhone'unla aynı Wi-Fi ağında bağlantı kur.", "" };
             int index = Array.IndexOf(new[] { "Receive", "Clipboard", "Send", "Device", "Settings" }, next);
             Control<TextBlock>("PageTitle").Text = titles[index];
@@ -445,8 +446,11 @@ namespace MultiOS
                 response.EnsureSuccessStatusCode();
                 status = json.Deserialize<Dictionary<string, object>>(await response.Content.ReadAsStringAsync());
                 failures = 0;
-                Control<TextBlock>("SidebarStatus").Text = "Gönderime hazır";
+                var conn = status.ContainsKey("connection") ? status["connection"] as Dictionary<string, object> : null;
+                bool isPaired = !string.IsNullOrEmpty(Str(conn, "lastPhoneSeen"));
+                Control<TextBlock>("SidebarStatus").Text = isPaired ? "Eşleştirildi" : "Gönderime hazır";
                 Control<System.Windows.Shapes.Ellipse>("StatusDot").Fill = Brush("#248A3D");
+                SetPairGlow(isPaired);
                 Control<TextBlock>("NetworkLabel").Text = Str(status, "ip");
                 Control<TextBlock>("DropPath").Text = Str(status, "dropDir");
                 Control<Button>("ResetReceiveFolder").IsEnabled = !string.Equals(Str(status, "dropDir"), Str(status, "defaultDropDir"), StringComparison.OrdinalIgnoreCase);
@@ -496,6 +500,7 @@ namespace MultiOS
             } catch {
                 failures++;
                 receiving = false;
+                SetPairGlow(false);
                 Control<System.Windows.Shapes.Ellipse>("StatusDot").RenderTransform = Transform.Identity;
                 Control<TextBlock>("SidebarStatus").Text = "Bağlantı bekleniyor";
                 Control<System.Windows.Shapes.Ellipse>("StatusDot").Fill = Brush("#C07900");
@@ -696,6 +701,27 @@ namespace MultiOS
             var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
             using (var stream = File.Create(path)) encoder.Save(stream);
         }
+        void SetPairGlow(bool active)
+        {
+            if (pairedActive == active) return;
+            pairedActive = active;
+            var logo = Control<Viewbox>("PairAppleLogo");
+            var glow = logo != null ? logo.Effect as DropShadowEffect : null;
+            if (glow == null) return;
+            if (!active) {
+                glow.BeginAnimation(DropShadowEffect.OpacityProperty, null);
+                glow.Opacity = 0;
+                return;
+            }
+            glow.Color = (Color)ColorConverter.ConvertFromString(dark ? "#30D158" : "#248A3D");
+            var anim = new DoubleAnimation(0.15, 0.55, TimeSpan.FromMilliseconds(2400)) {
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever,
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            };
+            glow.BeginAnimation(DropShadowEffect.OpacityProperty, anim);
+        }
+
         [DllImport("dwmapi.dll", PreserveSig = true)]
         static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
 
