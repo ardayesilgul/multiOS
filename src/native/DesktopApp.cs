@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,11 +14,11 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
-using System.Windows.Shell;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using Forms = System.Windows.Forms;
@@ -92,7 +93,7 @@ namespace MultiOS
             var signatureView = Control<Border>("Signature");
             signatureView.Visibility = signature == null ? Visibility.Collapsed : Visibility.Visible;
             if (signature != null) signatureView.OpacityMask = new ImageBrush(signature) { Stretch = Stretch.Uniform };
-            new WindowChrome { CaptionHeight = 0, ResizeBorderThickness = new Thickness(5), GlassFrameThickness = new Thickness(0), CornerRadius = new CornerRadius(0) }.Set(window);
+            window.SourceInitialized += (s, e) => ApplyWindowTheme();
             WireWindow();
             SetupTray();
             ApplyTheme(GetBool(preferences, "dark"));
@@ -121,9 +122,8 @@ namespace MultiOS
                     if (args.Contains("--dark")) ApplyTheme(true);
                     await Task.Delay(1200);
                     if (args.Contains("--verify")) {
-                        if (InsideButton(Control<TextBlock>("BrandText").Inlines.FirstInline) ||
-                            !InsideButton(Control<Button>("CloseButton").Content as DependencyObject))
-                            throw new Exception("Title bar hit testing failed");
+                        if (window.WindowStyle != WindowStyle.SingleBorderWindow)
+                            throw new Exception("Native window style failed");
                         if (Control<Border>("Signature").OpacityMask == null) throw new Exception("Signature did not load");
                         if (Control<Button>("ClearReceived").IsEnabled || Control<Button>("ClearOutbound").IsEnabled)
                             throw new Exception("Empty lists allow clearing");
@@ -232,11 +232,6 @@ namespace MultiOS
 
         void WireWindow()
         {
-            Control<Grid>("TitleBar").MouseLeftButtonDown += (s, e) => {
-                if (InsideButton(e.OriginalSource as DependencyObject)) return;
-                if (e.ClickCount == 2) window.WindowState = window.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-                else window.DragMove();
-            };
             window.Closing += (s, e) => { if (!exiting) { e.Cancel = true; window.Hide(); } };
             window.PreviewKeyDown += (s, e) => { if (e.Key == Key.Escape) window.Hide(); };
             window.SizeChanged += (s, e) => {
@@ -244,8 +239,6 @@ namespace MultiOS
                 Control<Image>("QrImage").Width = size;
                 Control<Image>("QrImage").Height = size;
             };
-            Control<Button>("CloseButton").Click += (s, e) => window.Hide();
-            Control<Button>("MinimizeButton").Click += (s, e) => window.WindowState = WindowState.Minimized;
             foreach (string p in new[] { "Receive", "Clipboard", "Send", "Device", "Settings" }) {
                 string current = p;
                 Control<Button>("Nav" + p).Click += (s, e) => SelectPage(current);
@@ -333,8 +326,6 @@ namespace MultiOS
                     }
                 } catch (Exception ex) { Feedback(ex.Message); Control<CheckBox>("AutoStart").IsChecked = IsAutoStart(); }
             };
-            foreach (Button button in new[] { Control<Button>("CloseButton"), Control<Button>("MinimizeButton") })
-                AutomationProperties.SetName(button, Convert.ToString(button.ToolTip));
         }
 
         async Task CheckConnection()
@@ -428,6 +419,7 @@ namespace MultiOS
             window.Resources["TitleHover"] = Brush(dark ? "#4A4A4E" : "#E4E4E9");
             window.Resources["ScrollThumb"] = Brush(dark ? "#818188" : "#9999A1");
             dropActive = true; SetDropActive(false);
+            ApplyWindowTheme();
             foreach (string name in new[] { "AutoStart", "DarkTheme" }) Control<CheckBox>(name).Foreground = window.Foreground;
             receiveSignature = ""; sendSignature = "";
             SelectPage(page);
@@ -704,6 +696,18 @@ namespace MultiOS
             var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
             using (var stream = File.Create(path)) encoder.Save(stream);
         }
+        [DllImport("dwmapi.dll", PreserveSig = true)]
+        static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+        void ApplyWindowTheme()
+        {
+            var hwnd = new WindowInteropHelper(window).Handle;
+            if (hwnd == IntPtr.Zero) return;
+            int value = dark ? 1 : 0;
+            if (DwmSetWindowAttribute(hwnd, 20, ref value, sizeof(int)) != 0)
+                DwmSetWindowAttribute(hwnd, 19, ref value, sizeof(int));
+        }
+
         async Task ExitApp()
         {
             exiting = true; timer.Stop();
@@ -715,10 +719,5 @@ namespace MultiOS
             showEvent.Dispose(); api.Dispose(); uploads.Dispose();
             Shutdown();
         }
-    }
-
-    static class ChromeExtension
-    {
-        public static void Set(this WindowChrome chrome, Window window) { WindowChrome.SetWindowChrome(window, chrome); }
     }
 }
